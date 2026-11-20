@@ -234,6 +234,10 @@ def build_parser() -> argparse.ArgumentParser:
     from .transcribe import add_parser as add_transcribe
 
     add_transcribe(sub, _add_profile_args)
+
+    from .translate import add_parser as add_translate
+
+    add_translate(sub, _add_profile_args)
     return parser
 
 
@@ -249,9 +253,11 @@ def main(argv: list[str] | None = None) -> int:
         from ..asr import AsrError
         from ..audio import AudioError
         from ..capture import CaptureError
+        from ..mt import MtError
+        from ..text import GlossaryError
         from ..vad import VadUnavailable
 
-        if isinstance(exc, (AudioError, CaptureError, VadUnavailable, AsrError)):
+        if isinstance(exc, (AudioError, CaptureError, VadUnavailable, AsrError, MtError, GlossaryError)):
             print(f"error: {exc}", file=sys.stderr)
             return 3
         raise

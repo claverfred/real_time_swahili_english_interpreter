@@ -41,6 +41,10 @@ class EventType(str, Enum):
     STATUS = "status"
 
 
+# Event data keys that carry speech content; dropped from persisted logs when log_text=False.
+TEXT_DATA_KEYS = frozenset({"source", "original", "stable", "unstable", "reference", "hypothesis"})
+
+
 @dataclass
 class Event:
     type: EventType
@@ -118,9 +122,7 @@ class EventRecorder:
             if self._keep:
                 self._events.append(ev)
             if self._jsonl is not None:
-                rec = ev.to_dict()
-                if not self._log_text:
-                    rec["text"] = None
+                rec = self._persisted(ev)
                 self._jsonl.write(json.dumps(rec, ensure_ascii=False, default=str) + "\n")
                 self._jsonl.flush()
             subscribers = list(self._subscribers)
@@ -166,13 +168,19 @@ class EventRecorder:
         return [e for e in self.events if e.type in wanted]
 
     # -- export -------------------------------------------------------------------------------
+    def _persisted(self, ev: Event) -> dict[str, Any]:
+        """Serializable form; with log_text=False every transcript/translation field is removed."""
+        rec = ev.to_dict()
+        if not self._log_text:
+            rec["text"] = None
+            rec["data"] = {k: (None if k in TEXT_DATA_KEYS else v) for k, v in rec["data"].items()}
+        return rec
+
     def export_jsonl(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("w", encoding="utf-8") as fh:
             for ev in self.events:
-                rec = ev.to_dict()
-                if not self._log_text:
-                    rec["text"] = None
+                rec = self._persisted(ev)
                 fh.write(json.dumps(rec, ensure_ascii=False, default=str) + "\n")
 
     def export_csv(self, path: Path) -> None:
@@ -182,10 +190,8 @@ class EventRecorder:
             writer = csv.DictWriter(fh, fieldnames=cols)
             writer.writeheader()
             for ev in self.events:
-                rec = ev.to_dict()
+                rec = self._persisted(ev)
                 rec["data"] = json.dumps(rec["data"], ensure_ascii=False, default=str)
-                if not self._log_text:
-                    rec["text"] = None
                 writer.writerow({c: rec.get(c) for c in cols})
 
     def close(self) -> None:

@@ -91,9 +91,24 @@ class MtConfig(_Strict):
     max_tokens: int = Field(256, gt=0)
     context_sentences: int = Field(2, ge=0)
     translate_partials: bool = False
+    partial_min_new_words: int = Field(3, ge=1)
+    engine: Literal["auto", "ctranslate2", "transformers"] = "auto"
+    compute_type: str = "auto"
+    context_mode: Literal["none", "prefix"] = "none"
+    entity_strategy: Literal["verify", "mask"] = "verify"
+    max_length_ratio: float = Field(3.0, gt=1.0)
+    uncertain_policy: Literal["translate_flagged", "skip"] = "translate_flagged"
     glossary_path: str | None = None
     cache_size: int = Field(2048, ge=0)
     fallback_models: list[str] = Field(default_factory=list)
+
+
+class TextConfig(_Strict):
+    """Transcript stabilization and sentence aggregation before MT."""
+    capitalize: bool = True
+    add_final_punct: bool = True
+    max_sentence_words: int = Field(40, ge=5)
+    hold_incomplete_on_split: bool = True
 
 
 class TtsConfig(_Strict):
@@ -160,6 +175,7 @@ class InterpreterConfig(_Strict):
     audio: AudioConfig = Field(default_factory=AudioConfig)
     vad: VadConfig = Field(default_factory=VadConfig)
     asr: AsrConfig
+    text: TextConfig = Field(default_factory=TextConfig)
     mt: MtConfig
     tts: TtsConfig
     streaming: StreamingConfig = Field(default_factory=StreamingConfig)

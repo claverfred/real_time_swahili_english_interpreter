@@ -1,4 +1,4 @@
-﻿# Real-Time Swahili–English Interpreter
+# Real-Time Swahili–English Interpreter
 
 Modular cascade pipeline: Swahili audio → VAD → streaming ASR → stabilization → MT → chunking →
 streaming TTS → English audio. One shared codebase for a CPU-only Windows PC, GPU PCs, Google Colab,
@@ -12,8 +12,8 @@ and HPC (Slurm). Full requirements: [REALTIME_SWAHILI_ENGLISH_SYSTEM.md](REALTIM
 | 1 | Config profiles, event tracing, logging, manifests, platform diagnosis, CLI | done |
 | 2 | Audio I/O + VAD | done |
 | 3 | Streaming ASR | done |
-| 4 | Text stabilization + MT | next |
-| 5 | Streaming TTS | planned |
+| 4 | Text stabilization + MT | done |
+| 5 | Streaming TTS | next |
 | 6 | Async pipeline + Python API + batch/live CLI | planned |
 | 7 | FastAPI/WebSocket server + local UI | planned |
 | 8 | Evaluation and benchmarks | planned |
@@ -115,6 +115,70 @@ Most of small's errors are word boundaries (for example "Leoninaenda" for "Leo n
 WER penalises heavily; CER is the fairer view. `large-v3-turbo` is far more accurate but slower
 than real time on CPU. Use it for batch files, or on a GPU.
 
+## Translation (Phase 4)
+
+```powershell
+python scripts/fetch_flores200.py                                      # FLORES-200 dev/devtest (human references)
+python -m src.cli translate --text "Habari za asubuhi." --profile cpu  # MT-only mode
+python -m src.cli translate --input sentences.txt --glossary terms.csv --mask --export
+python scripts/mt_eval.py --profile cpu --models facebook/nllb-200-distilled-600M Helsinki-NLP/opus-mt-swc-en --n 200 --context
+```
+
+**Path from ASR to English:** each ASR final goes through stabilization, then sentence
+aggregation, then MT.
+
+- **Stabilization** changes only spacing, punctuation, case and runaway repeats. Every change
+  is listed, and words are never added or guessed.
+- **Sentence aggregation** is Swahili-aware: abbreviations such as `Dkt.`, `Bw.` and `n.k.`
+  don't end a sentence. After a max-duration VAD split, the unfinished tail is held until the
+  sentence completes. At a real pause, everything is released. Run-on speech is broken at a
+  clause boundary after `text.max_sentence_words`.
+- **Events:** `transcript_stabilized`, `mt_requested`, `mt_partial`, `mt_final`.
+
+**Engines:**
+
+- **CTranslate2** (default): int8 on CPU. The Hugging Face model is converted once into
+  `cache/ct2/`, with a `provenance.json` recording the source commit, quantization and
+  ctranslate2 version. Conversion needs transformers and torch; running the converted model
+  doesn't.
+- **transformers:** the reference engine.
+
+If a model or engine fails, the next one is tried, and the fallback is recorded.
+
+**Safeguards:**
+
+- An LRU cache.
+- Partial translation is opt-in (`mt.translate_partials`). Only the *committed* ASR prefix is
+  translated, greedily, and the result is marked provisional. The unstable tail is never sent.
+- Uncertain transcripts are translated and flagged, or skipped (`mt.uncertain_policy`).
+- Output guards flag `length_ratio` (possible hallucinated completion), `repeat_collapsed` and
+  `empty_output`.
+- Preservation checks raise `number_missing`, `acronym_missing` and `glossary_missing`. Name
+  preservation is reported but not flagged: Swahili capitalizes common nouns that are
+  correctly translated ("Kamati" becomes "Committee"), so that flag fired on 44% of sentences.
+- With `--mask`, numbers and glossary terms are replaced by placeholders (`Z1Q`, the format
+  that survived all probe sentences on both models). If the model drops a placeholder, the
+  sentence is re-translated unmasked.
+
+**Measured on the local CPU** (FLORES-200 devtest, first 200 sentences, human references,
+CTranslate2 int8, beam 2, batch 1; sacrebleu signatures in the run's `results.json`):
+
+| Model | License | BLEU | chrF | chrF++ | p50 | p95 | Numbers kept | RAM |
+|---|---|---|---|---|---|---|---|---|
+| nllb-200-distilled-600M | CC-BY-NC-4.0 | 42.0 | 64.2 | 62.9 | 719 ms | 1201 ms | 91% | ~845 MB |
+| nllb-600M + 1 sentence of context | | 40.8 | 62.9 | 61.5 | 1720 ms | 2900 ms | 87% | |
+| opus-mt-swc-en | Apache-2.0 | 21.8 | 46.5 | 45.1 | 116 ms | 201 ms | 81% | ~130 MB |
+
+- The `cpu` profile uses NLLB-600M, with Marian as its fallback. `opus-mt-swc-en` was trained
+  on *Congo* Swahili, and it shows: "Dodoma" became "Dodama", and "shilingi" became "pounds".
+- Context prefixing lowered scores and doubled latency, so `mt.context_mode` defaults to `none`.
+- **NLLB is licensed for non-commercial use only.**
+
+**Cascade caveat:** on clean Swahili text NLLB is good. On Whisper `small` output from this
+CPU, word-boundary ASR errors carry through. For example, "elfumbili" ("elfu mbili", two
+thousand) became "two shillings". On CPU-only hardware, ASR quality is the end-to-end
+bottleneck. GPU profiles (`large-v3-turbo`, ASR WER 0.12 on the smoke set) avoid most of it,
+and Phase 8 measures it properly.
 ## Configuration
 
 Profiles live in `configs/` and inherit through `inherits:`. Precedence (highest first):

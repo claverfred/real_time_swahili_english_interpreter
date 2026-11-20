@@ -84,3 +84,18 @@ def test_percentiles_match_numpy_linear():
     s = summarize(xs)
     assert s["n"] == 10 and s["p99"] == pytest.approx(9.91) and s["mean"] == 5.5
     assert summarize([])["n"] == 0
+
+
+def test_log_text_false_redacts_text_in_data(tmp_path):
+    from src.pipeline.events import EventRecorder, EventType
+    rec = EventRecorder(log_text=False, jsonl_path=tmp_path / "live.jsonl")
+    rec.emit(EventType.MT_FINAL, text="hello", source="habari", latency_ms=5.0)
+    rec.emit(EventType.ASR_PARTIAL, text="habari za", stable="habari", unstable="za")
+    rec.export_jsonl(tmp_path / "e.jsonl")
+    rec.export_csv(tmp_path / "e.csv")
+    rec.close()
+    for name in ("live.jsonl", "e.jsonl", "e.csv"):
+        body = (tmp_path / name).read_text(encoding="utf-8")
+        assert "habari" not in body and "hello" not in body, name
+    assert '"latency_ms": 5.0' in (tmp_path / "e.jsonl").read_text(encoding="utf-8")
+    assert rec.events[0].text == "hello"          # live subscribers still get the text

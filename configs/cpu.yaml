@@ -1,4 +1,4 @@
-﻿inherits: default
+inherits: default
 profile: cpu
 description: Local operation without a GPU. INT8 ASR, light MT, offline TTS.
 environment: {device: cpu, precision: int8}
@@ -8,5 +8,11 @@ vad: {backend: webrtc}
 # small is the most accurate model that keeps up in real time here. For offline batch accuracy use
 #   --set asr.model=large-v3-turbo   (about 1.7x slower than real time on this CPU).
 asr: {model: small, compute_type: int8, beam_size: 1, chunk_s: 1.5, overlap_s: 0.5, fallback_models: [base]}
-mt: {backend: marian, model: Helsinki-NLP/opus-mt-swc-en, license: CC-BY-4.0, beam_size: 2, fallback_models: [facebook/nllb-200-distilled-600M]}
+# MT choice measured 2026-11-20, FLORES-200 devtest first 200 sentences, CTranslate2 int8, beam 2
+# (scripts/mt_eval.py):
+#   nllb-200-distilled-600M chrF 64.2 BLEU 42.0 p50 719 ms p95 1201 ms, ~845 MB RAM
+#   opus-mt-swc-en          chrF 46.5 BLEU 21.8 p50 116 ms p95  201 ms, ~130 MB RAM (Congo Swahili data)
+# Context prefixing lowered both (NLLB chrF 62.9), so context_mode stays "none".
+# NLLB is CC-BY-NC-4.0 (non-commercial); Marian (Apache-2.0) is the permissive fallback.
+mt: {backend: nllb, model: facebook/nllb-200-distilled-600M, license: CC-BY-NC-4.0, beam_size: 2, fallback_models: [Helsinki-NLP/opus-mt-swc-en]}
 tts: {backend: piper, fallback_backends: []}

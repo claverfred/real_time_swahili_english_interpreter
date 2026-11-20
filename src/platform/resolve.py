@@ -35,6 +35,7 @@ class RuntimeInfo:
     device: str
     precision: str
     asr_compute_type: str
+    mt_compute_type: str
     cpu_threads: int
     gpu_name: str | None
     gpu_memory_mb: int | None
@@ -84,13 +85,16 @@ def resolve_runtime(
         fallback("precision", "bf16", "fp16", "GPU compute capability < 8.0")
         env.precision = "fp16"
 
-    compute = cfg.asr.compute_type
-    if compute == "auto":
-        compute = _CT2_COMPUTE[env.precision]
-    elif env.device == "cpu" and compute in {"float16", "bfloat16", "int8_float16", "int8_bfloat16"}:
-        fallback("asr.compute_type", compute, "int8", "compute type not supported on CPU")
-        compute = "int8"
-    cfg.asr.compute_type = compute
+    def _compute(section: str, requested: str) -> str:
+        if requested == "auto":
+            return _CT2_COMPUTE[env.precision]
+        if env.device == "cpu" and requested in {"float16", "bfloat16", "int8_float16", "int8_bfloat16"}:
+            fallback(f"{section}.compute_type", requested, "int8", "compute type not supported on CPU")
+            return "int8"
+        return requested
+
+    compute = cfg.asr.compute_type = _compute("asr", cfg.asr.compute_type)
+    cfg.mt.compute_type = _compute("mt", cfg.mt.compute_type)
 
     env.cpu_threads = auto_threads(env.cpu_threads)
 
@@ -100,6 +104,7 @@ def resolve_runtime(
         device=env.device,
         precision=env.precision,
         asr_compute_type=compute,
+        mt_compute_type=cfg.mt.compute_type,
         cpu_threads=env.cpu_threads,
         gpu_name=gpu.name if gpu else None,
         gpu_memory_mb=gpu.memory_total_mb if gpu else None,

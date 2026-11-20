@@ -50,17 +50,30 @@ asr:
   compression_ratio_threshold: 2.4
   fallback_models: [small]
 
+text:
+  capitalize: true
+  add_final_punct: true
+  max_sentence_words: 40          # force a clause-level break in run-on speech
+  hold_incomplete_on_split: true  # after a max-duration split, wait for the sentence to finish
+
 mt:
-  backend: nllb         # nllb | marian
+  backend: nllb         # nllb | marian | m2m
   model: facebook/nllb-200-distilled-600M
   revision: main
-  license: CC-BY-NC-4.0
+  license: CC-BY-NC-4.0   # non-commercial; see docs before any commercial use
+  engine: auto          # auto (ctranslate2 if convertible, else transformers) | ctranslate2 | transformers
+  compute_type: auto    # follows environment.precision (int8 on CPU)
   src_lang: swh_Latn
   tgt_lang: eng_Latn
   beam_size: 4
   max_tokens: 256
   context_sentences: 2
+  context_mode: none    # none | prefix (forced-decode the previous translation)
   translate_partials: false   # only stable prefixes / finals are translated
+  partial_min_new_words: 3
+  entity_strategy: verify     # verify | mask (numbers/glossary terms masked through MT)
+  max_length_ratio: 3.0       # output/input words above this is flagged as possible hallucination
+  uncertain_policy: translate_flagged   # translate_flagged | skip
   glossary_path: null
   cache_size: 2048
   fallback_models: [Helsinki-NLP/opus-mt-swc-en]
