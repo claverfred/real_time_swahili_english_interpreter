@@ -1,0 +1,4 @@
+inherits: hpc
+profile: hpc_finetune
+description: Fine-tuning behavior on allocated cluster GPUs (Phase 10 fills in the training block).
+privacy: {data_class: licensed}

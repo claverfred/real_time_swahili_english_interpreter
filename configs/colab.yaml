@@ -1,0 +1,5 @@
+inherits: default
+profile: colab
+description: Hosted GPU (T4/L4/A100/L40S) with Google Drive cache persistence.
+environment: {platform: colab, device: cuda, precision: fp16}
+storage: {cache_dir: /content/drive/MyDrive/swahili_interpreter/cache, output_dir: /content/results, log_dir: /content/logs}

@@ -1,0 +1,4 @@
+inherits: hpc
+profile: hpc_evaluate
+description: Distributed or batch evaluation on the cluster.
+asr: {beam_size: 5}

@@ -1,0 +1,9 @@
+inherits: default
+profile: realtime
+description: Minimize first-audio latency for live interpretation. GPU recommended.
+environment: {precision: fp16}
+vad: {min_silence_ms: 350, speech_pad_ms: 150, max_utterance_s: 12.0}
+asr: {beam_size: 1, chunk_s: 0.6, overlap_s: 0.3}
+mt: {beam_size: 2, context_sentences: 1}
+tts: {chunk_max_chars: 120}
+streaming: {buffer_ms: 100}

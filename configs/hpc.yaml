@@ -1,0 +1,19 @@
+inherits: default
+profile: hpc
+description: >-
+  Cluster benchmarking and throughput. Storage paths come from environment
+  variables exported by the Slurm job script; no cluster paths are hard-coded.
+environment:
+  platform: hpc
+  device: cuda
+  precision: bf16
+asr:
+  model: large-v3
+mt:
+  model: facebook/nllb-200-1.3B
+storage:
+  cache_dir: "${SCRATCH_DIR:-.}/swahili_interpreter/cache"
+  output_dir: "${SCRATCH_DIR:-.}/swahili_interpreter/results"
+  log_dir: logs
+fallback:
+  allow_cloud: false

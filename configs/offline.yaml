@@ -1,0 +1,6 @@
+inherits: default
+profile: offline
+description: No external API calls. Suitable for private or restricted audio.
+fallback: {allow_cloud: false}
+tts: {backend: piper, fallback_backends: []}
+privacy: {data_class: restricted, allow_cloud_upload: false}

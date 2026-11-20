@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+
+# Secrets — never commit
+.env
+*.pem
+*.key
+hf_token*
+credentials*.json
+
+# Data and outputs — private/restricted audio must never enter Git
+data/*
+!data/README.md
+!data/manifests/
+data/manifests/*
+!data/manifests/.gitkeep
+results/*
+!results/README.md
+outputs/
+logs/
+cache/
+checkpoints/
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.zip
+
+# Notebooks
+.ipynb_checkpoints/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

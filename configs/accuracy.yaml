@@ -1,0 +1,6 @@
+inherits: default
+profile: accuracy
+description: Highest quality for offline research. GPU required for the larger models.
+environment: {device: cuda, precision: fp16}
+asr: {model: large-v3, beam_size: 5, chunk_s: 2.0, overlap_s: 1.0, word_timestamps: true, fallback_models: [large-v3-turbo]}
+mt: {model: facebook/nllb-200-1.3B, beam_size: 5, context_sentences: 3, fallback_models: [facebook/nllb-200-distilled-600M]}

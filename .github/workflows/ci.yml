@@ -1,0 +1,25 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint-and-test:
+    # Lightweight only: no model downloads or benchmarks in ordinary CI.
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.10", "3.11"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[dev,audio]"
+      - run: ruff check src tests
+      - run: pytest -m "not slow and not gpu"
+      - run: python -m src.cli diagnose --json
+      - run: python -m src.cli config show --profile cpu

@@ -1,0 +1,6 @@
+inherits: default
+profile: cloud_fallback
+description: Permits cloud TTS/MT/ASR fallbacks for public data only.
+fallback: {allow_cloud: true}
+tts: {fallback_backends: [edge]}
+privacy: {data_class: public, allow_cloud_upload: true}

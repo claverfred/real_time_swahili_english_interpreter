@@ -1,0 +1,12 @@
+﻿inherits: default
+profile: cpu
+description: Local operation without a GPU. INT8 ASR, light MT, offline TTS.
+environment: {device: cpu, precision: int8}
+vad: {backend: webrtc}
+# ASR choice measured 2026-11-20 on a 10-core CPU, synthetic Swahili smoke set (scripts/asr_smoke_compare.py):
+#   base WER 0.94 RTF 0.14 | small WER 0.72 RTF 0.49 | medium WER 0.42 RTF 1.24 | large-v3-turbo WER 0.12 RTF 1.74
+# small is the most accurate model that keeps up in real time here. For offline batch accuracy use
+#   --set asr.model=large-v3-turbo   (about 1.7x slower than real time on this CPU).
+asr: {model: small, compute_type: int8, beam_size: 1, chunk_s: 1.5, overlap_s: 0.5, fallback_models: [base]}
+mt: {backend: marian, model: Helsinki-NLP/opus-mt-swc-en, license: CC-BY-4.0, beam_size: 2, fallback_models: [facebook/nllb-200-distilled-600M]}
+tts: {backend: piper, fallback_backends: []}

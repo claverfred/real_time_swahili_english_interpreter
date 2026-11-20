@@ -1,0 +1,6 @@
+inherits: default
+profile: low_vram
+description: Constrain GPU memory (8-16 GB or quantized).
+environment: {device: cuda, precision: int8_float16}
+asr: {model: large-v3-turbo, compute_type: int8_float16}
+mt: {model: facebook/nllb-200-distilled-600M}

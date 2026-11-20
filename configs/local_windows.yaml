@@ -1,0 +1,6 @@
+inherits: cpu
+profile: local_windows
+description: Windows PC with microphone capture. CPU by default, CUDA if present.
+environment: {platform: local, device: auto}
+tts: {backend: edge, voice: en-US-AriaNeural, model: edge-tts, license: Microsoft service terms, fallback_backends: [piper]}
+fallback: {allow_cloud: true}
