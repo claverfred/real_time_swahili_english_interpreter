@@ -24,7 +24,8 @@ def test_every_profile_validates(name):
 def test_inheritance_chain_local_windows_inherits_cpu():
     cfg = load_config("local_windows", environ={})
     assert cfg.asr.compute_type == "int8"      # from cpu
-    assert cfg.tts.backend == "edge"           # own override
+    assert cfg.fallback.allow_cloud is True    # own override
+    assert cfg.tts.voices["edge"] == "en-US-AriaNeural" and "kokoro" in cfg.tts.voices   # dicts deep-merge
     assert cfg.vad.min_speech_ms == 250        # from default
 
 

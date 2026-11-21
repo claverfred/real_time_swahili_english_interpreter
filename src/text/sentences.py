@@ -17,6 +17,8 @@ from ..config.schema import TextConfig
 ABBREVIATIONS = {
     "dkt", "dk", "dak", "bw", "bi", "mh", "mhe", "prof", "nk", "n.k", "k.m", "km", "kn", "yaani",
     "sh", "tsh", "ksh", "st", "mt", "mr", "mrs", "ms", "dr", "jr", "sr", "no", "vol", "uk",
+    # English (MT output is split again before TTS)
+    "e.g", "i.e", "etc", "vs", "u.s", "u.k", "a.m", "p.m", "gen", "gov", "sen", "rep", "lt", "col", "inc", "ltd",
 }
 _BOUNDARY = re.compile(r"([.?!…]+[\"'»”’)\]]*)\s+(?=[\"'«“‘(\[]?[A-ZÀ-Ý0-9])")
 _TERMINAL = re.compile(r"[.?!…][\"'»”’)\]]*$")

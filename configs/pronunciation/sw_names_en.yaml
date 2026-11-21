@@ -1,0 +1,17 @@
+# EXAMPLE pronunciation dictionary for East African names (tts.pronunciation_dict). NOT enabled
+# by default.
+#
+# Evidence (2026-11-20, scripts/tts_name_probe.py and tts_eval.py): English voices mispronounce
+# many Swahili names ("Suluhu Hassan" was heard as "Salu hasn't"). But a Whisper round trip
+# could not show that respellings help consistently: results varied by voice, and
+# capitalized stress syllables ("doh-DOH-mah") were read out as letters and made things worse.
+# Use lowercase respellings only, check them per voice by listening, preferably with a
+# Swahili speaker, and keep only the ones that help.
+#
+# Swahili spelling is phonetic: a=ah, e=eh, i=ee, o=oh, u=oo; stress on the penultimate syllable.
+Suluhu: sooloohoo          # helped lessac in the probe
+Magufuli: magoofoolee      # helped joe in the probe
+Iringa: eereenga           # helped sapi in the probe
+Nyerere: nyeh-reh-reh
+Mwinyi: mweenyee
+Mbeya: mbayah

@@ -79,16 +79,28 @@ mt:
   fallback_models: [Helsinki-NLP/opus-mt-swc-en]
 
 tts:
-  backend: piper        # piper | edge | mms | xtts | kokoro
-  model: en_US-lessac-medium
-  revision: main
-  license: MIT
-  voice: en_US-lessac-medium
+  backend: piper        # piper | kokoro | sapi | edge (cloud) | mms
+  model: rhasspy/piper-voices
+  revision: 42301ec547bc2939386cf0ae9f9050ca05b1d3af   # pinned piper-voices commit
+  # Voice measured 2026-11-20 (scripts/tts_eval.py, 33 sentences, Whisper round-trip WER):
+  #   libritts_r 0.074 (CC BY 4.0) | lessac 0.071 (Blizzard-2013 licence, restricted) | joe 0.092 (CC0)
+  license: "voice data CC BY 4.0 (LibriTTS-R; attribution required); piper engine GPL-3.0"
+  voice: en_US-libritts_r-medium
   sample_rate: 22050
   chunk_max_chars: 220
-  pronunciation_dict: null
+  first_chunk_max_chars: 80
+  speaker_id: null
+  speaking_rate: 1.0
+  sentence_pause_ms: 120
+  fade_ms: 5.0
+  trim_silence: true
+  target_rms_dbfs: -20.0
+  spell_acronyms: true
+  pronunciation_dict: null      # csv/json/yaml: word -> spoken form
+  voices: {kokoro: af_heart, sapi: default, edge: en-US-AriaNeural, mms: facebook/mms-tts-eng}
   voice_cloning: false          # never without explicit, documented consent
   fallback_backends: []         # cloud backends (edge) only via profiles with allow_cloud
+  allow_model_download: true
 
 streaming:
   buffer_ms: 200

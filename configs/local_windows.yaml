@@ -2,5 +2,8 @@ inherits: cpu
 profile: local_windows
 description: Windows PC with microphone capture. CPU by default, CUDA if present.
 environment: {platform: local, device: auto}
-tts: {backend: edge, voice: en-US-AriaNeural, model: edge-tts, license: Microsoft service terms, fallback_backends: [piper]}
+# Edge (cloud) measured 2026-11-20 from this PC: ~2.6-3.1 s per chunk (RTF 1.7) vs piper 0.2 s, so
+# local piper is the default. Edge is opt-in (text leaves the PC): --backend edge, e.g. with
+# --set tts.voice=en-TZ-ImaniNeural (Tanzanian English; also en-TZ-ElimuNeural, en-KE-AsiliaNeural).
+tts: {backend: piper, fallback_backends: [sapi], voices: {edge: en-US-AriaNeural, sapi: default}}
 fallback: {allow_cloud: true}

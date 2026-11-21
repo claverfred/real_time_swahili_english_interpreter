@@ -117,11 +117,21 @@ class TtsConfig(_Strict):
     revision: str = "main"
     license: str = "unknown"
     voice: str
-    sample_rate: int = Field(22050, gt=0)
+    sample_rate: int = Field(22050, gt=0)          # output rate; every backend is resampled to it
     chunk_max_chars: int = Field(220, ge=20)
+    first_chunk_max_chars: int = Field(80, ge=20)  # short first chunk -> earlier first audio
+    speaker_id: int | None = None                  # multi-speaker models (piper libritts_r, ...)
+    speaking_rate: float = Field(1.0, gt=0.25, le=4.0)
+    sentence_pause_ms: int = Field(120, ge=0)      # silence inserted between chunks
+    fade_ms: float = Field(5.0, ge=0)              # fade in/out at chunk edges (no clicks)
+    trim_silence: bool = True
+    target_rms_dbfs: float | None = Field(-20.0, le=0)   # loudness normalization; null = off
+    spell_acronyms: bool = True                    # "CCM" -> "C C M" unless in the dictionary
     pronunciation_dict: str | None = None
+    voices: dict[str, str] = Field(default_factory=dict)  # voice per fallback backend
     voice_cloning: bool = False
     fallback_backends: list[str] = Field(default_factory=list)
+    allow_model_download: bool = True
 
     @model_validator(mode="after")
     def _no_cloning(self) -> TtsConfig:

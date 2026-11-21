@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import csv
+import dataclasses
 import itertools
 import json
 import threading
@@ -119,8 +120,8 @@ class EventRecorder:
                 data=data,
                 audio=audio,
             )
-            if self._keep:
-                self._events.append(ev)
+            if self._keep:  # retained history never holds audio payloads (memory grows with session)
+                self._events.append(ev if ev.audio is None else dataclasses.replace(ev, audio=None))
             if self._jsonl is not None:
                 rec = self._persisted(ev)
                 self._jsonl.write(json.dumps(rec, ensure_ascii=False, default=str) + "\n")

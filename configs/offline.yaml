@@ -2,5 +2,5 @@ inherits: default
 profile: offline
 description: No external API calls. Suitable for private or restricted audio.
 fallback: {allow_cloud: false}
-tts: {backend: piper, fallback_backends: []}
+tts: {backend: piper, fallback_backends: [sapi], allow_model_download: false}   # sapi: Windows only, skipped elsewhere
 privacy: {data_class: restricted, allow_cloud_upload: false}

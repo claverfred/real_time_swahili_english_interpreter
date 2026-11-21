@@ -15,4 +15,7 @@ asr: {model: small, compute_type: int8, beam_size: 1, chunk_s: 1.5, overlap_s: 0
 # Context prefixing lowered both (NLLB chrF 62.9), so context_mode stays "none".
 # NLLB is CC-BY-NC-4.0 (non-commercial); Marian (Apache-2.0) is the permissive fallback.
 mt: {backend: nllb, model: facebook/nllb-200-distilled-600M, license: CC-BY-NC-4.0, beam_size: 2, fallback_models: [Helsinki-NLP/opus-mt-swc-en]}
-tts: {backend: piper, fallback_backends: []}
+# TTS measured 2026-11-20 (scripts/tts_eval.py): piper libritts_r first audio p50 218 ms, RTF 0.06;
+# sapi (Windows built-in) first audio 35 ms, RTF 0.006, best round-trip WER (0.056); naturalness not yet rated;
+# kokoro int8 RTF 1.47 (too slow here). sapi is the offline fallback (skipped off Windows).
+tts: {backend: piper, fallback_backends: [sapi]}

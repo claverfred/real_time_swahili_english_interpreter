@@ -13,8 +13,8 @@ and HPC (Slurm). Full requirements: [REALTIME_SWAHILI_ENGLISH_SYSTEM.md](REALTIM
 | 2 | Audio I/O + VAD | done |
 | 3 | Streaming ASR | done |
 | 4 | Text stabilization + MT | done |
-| 5 | Streaming TTS | next |
-| 6 | Async pipeline + Python API + batch/live CLI | planned |
+| 5 | Streaming TTS | done |
+| 6 | Async pipeline + Python API + batch/live CLI | next |
 | 7 | FastAPI/WebSocket server + local UI | planned |
 | 8 | Evaluation and benchmarks | planned |
 | 9 | Colab notebooks | planned |
@@ -179,6 +179,66 @@ CPU, word-boundary ASR errors carry through. For example, "elfumbili" ("elfu mbi
 thousand) became "two shillings". On CPU-only hardware, ASR quality is the end-to-end
 bottleneck. GPU profiles (`large-v3-turbo`, ASR WER 0.12 on the smoke set) avoid most of it,
 and Phase 8 measures it properly.
+## Speech synthesis (Phase 5)
+
+```powershell
+python -m src.cli speak --text "Good morning. The price is 2,500 shillings." --output out.wav --profile cpu
+python -m src.cli speak --text "Hello" --backend sapi --play
+python -m src.cli speak --text "Hello" --backend edge --voice en-TZ-ImaniNeural --profile local_windows   # cloud, opt-in
+python scripts/tts_eval.py --profile cpu --candidates piper:en_US-libritts_r-medium sapi:default
+```
+
+**Path from MT to audio:** only *final* translations are spoken, because audio can't be taken
+back once played.
+
+- **Chunking:** English text is split only at sentence ends, so "Dr." and "U.S." don't break
+  it. Over-long sentences are split at clause boundaries. The first chunk may end at an early
+  clause boundary so audio starts sooner.
+- **Spoken form:** acronyms are spelled out ("CCM" becomes "C C M") unless they are normally
+  read as words. "TSh 2,000" becomes "2,000 Tanzanian shillings", and "%" becomes "percent".
+  An optional pronunciation dictionary is applied last.
+- **Consistent output:** every backend's audio is resampled to `tts.sample_rate`, trimmed of
+  silence, normalized to -20 dBFS RMS with a -1 dBFS peak limit, and faded at chunk edges to
+  avoid clicks. Chunks are joined with `tts.sentence_pause_ms` of silence.
+- **Validation:** each chunk is checked for empty output, clipping, very quiet audio, mostly
+  silent audio, and an implausible duration for the text.
+- **Events:** `tts_chunk_requested`, `tts_first_audio`, `tts_audio` (the payload, never
+  persisted), `tts_chunk_complete`, `tts_complete`.
+- **Failures:** a backend that fails during synthesis is retried `streaming.retry_count`
+  times. Then the next backend takes over and a `fallback` event is recorded, because the
+  voice changes.
+
+| Backend | Runs | License (engine / voice) |
+|---|---|---|
+| `piper` | local | GPL-3.0 engine / per-voice MODEL_CARD (default voice `en_US-libritts_r-medium`: CC BY 4.0, attribution required) |
+| `sapi` | local, Windows | Windows built-in voices |
+| `kokoro` | local | Apache-2.0 model; model files SHA-256 pinned |
+| `mms` | local | CC-BY-NC-4.0 |
+| `edge` | **cloud** | Microsoft online service terms. The text is sent to Microsoft, so this needs `fallback.allow_cloud` and a non-restricted data class. |
+
+**Measured on the local CPU** (33 sentences: 8 with names and numbers, plus 25 FLORES English
+references). "Intelligibility" is a Whisper `small` round trip (machine transcript of the
+speech, scored against the text). It is a proxy, not a listening test.
+
+| Voice | First audio p50 / p95 / p99 | RTF | Round-trip WER (all / names & numbers) | RAM |
+|---|---|---|---|---|
+| piper libritts_r | 218 / 452 / 504 ms | 0.063 | 0.074 / 0.210 | ~360 MB |
+| piper lessac | 235 / 520 / 679 ms | 0.061 | 0.071 / 0.145 | ~400 MB |
+| piper joe (CC0) | 278 / 522 / 603 ms | 0.064 | 0.092 / 0.237 | ~410 MB |
+| sapi (Windows) | 35 / 57 / 66 ms | 0.006 | 0.056 / 0.105 | ~30 MB |
+| kokoro af_heart (int8) | 6785 / 13119 / 17558 ms | 1.468 | 0.051 / 0.092 | ~510 MB |
+| edge en-TZ-Imani (cloud, this network) | ~2.6–3.1 s per chunk | ~1.7 | not measured | — |
+
+- **`cpu` and `local_windows` use `piper` `libritts_r`, with `sapi` as the fallback.** lessac
+  is slightly more intelligible, but its dataset license is restricted.
+- **Kokoro is the most intelligible but too slow on this CPU**, and Edge is slower than real
+  time from this network. Both are opt-in.
+- **Naturalness and prosody have not been rated yet.** They need human listeners (Phase 8).
+- **East African names are the weak spot for every English voice.** "Suluhu Hassan" was heard
+  as "Salu hasn't". A pronunciation dictionary is supported. The example
+  `configs/pronunciation/sw_names_en.yaml` is **not** enabled by default: the Whisper round
+  trip could not show a consistent gain, and capitalized respellings made things worse. Check
+  entries by listening, ideally with a Swahili speaker.
 ## Configuration
 
 Profiles live in `configs/` and inherit through `inherits:`. Precedence (highest first):
