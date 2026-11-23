@@ -1,0 +1,35 @@
+# Recurring Swahili ASR mistakes -> correct Swahili, applied to the transcript before translation.
+# See src/asr/corrections.py. Whole-word, case-insensitive, longest entry first.
+# Add an entry only after seeing the same mistake more than once; prefer phrases over single words.
+# Source: live laptop-mic session 2026-11-23, Mollel/ASR-Swahili-Small (beam 1).
+heard,correct,note
+mwenye kiti,mwenyekiti,chairperson split into "owner of a chair"
+madam barimbali,mambo mbalimbali,various matters
+madam mbalimbali,mambo mbalimbali,various matters
+barimbali,mbalimbali,various
+mvishimiwa,mheshimiwa,honourable
+waheshimiwa wa alikwa,waheshimiwa waalikwa,honourable invited guests
+dhabibi na mabwana,mabibi na mabwana,ladies and gentlemen
+sabari ya,habari ya,greeting
+kikauhiki,kikao hiki,this meeting
+kilombili,kilo mbili,two kilos
+ni takwenda,nitakwenda,I will go
+nina tarajia,ninatarajia,I expect
+ninafuraha,nina furaha,I am happy
+kukutana na nyingi,kukutana na nyinyi,to meet you (plural)
+ya ngu,yangu,my
+mefanikiwa,mmefanikiwa,you (pl.) have succeeded
+inaopatikana,inayopatikana,which is found
+ikiwepo,ikiwemo,including
+vivema,ni vyema,it is good that
+ranzania,Tanzania,place name
+# Session 2026-11-23 #2 (formal graduation speech)
+ndugu moja kiti,ndugu mwenyekiti,chairperson (variant)
+majukumi,majukumu,duties
+majiukumi,majukumu,duties
+mbodi,bodi,board
+wajibwenu,wajibu wenu,your duty
+usingi fanikiwa,usingefanikiwa,"would not have succeeded (split reverses meaning)"
+tosingi kuwa,tusingekuwa,"we would not be"
+maafari,mahafali,graduation ceremony
+mia sabiti,nia thabiti,firm resolve

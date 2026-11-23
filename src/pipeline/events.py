@@ -89,6 +89,7 @@ class EventRecorder:
         self._log_text = log_text
         self._subscribers: list[tuple[asyncio.AbstractEventLoop, asyncio.Queue[Event | None]]] = []
         self._sub_max = subscriber_queue_max
+        self.dropped = 0                 # events discarded because a subscriber fell behind
         self._jsonl = None
         if jsonl_path is not None:
             jsonl_path.parent.mkdir(parents=True, exist_ok=True)
@@ -131,23 +132,31 @@ class EventRecorder:
             loop.call_soon_threadsafe(self._offer, queue, ev)
         return ev
 
-    @staticmethod
-    def _offer(queue: asyncio.Queue[Event | None], ev: Event) -> None:
-        if queue.full():  # never block producers; drop oldest for slow consumers
+    def _offer(self, queue: asyncio.Queue[Event | None], ev: Event | None) -> None:
+        if queue.full():  # never block producers; drop oldest for slow consumers (counted)
             try:
                 queue.get_nowait()
+                self.dropped += 1
             except asyncio.QueueEmpty:
                 pass
         queue.put_nowait(ev)
 
     # -- consumption --------------------------------------------------------------------------
+    def subscribe(self, maxsize: int | None = None) -> asyncio.Queue[Event | None]:
+        """Register a subscriber queue *now* (so nothing emitted after this call is missed).
+        ``None`` is delivered on :meth:`close`. Must be called from a running event loop."""
+        queue: asyncio.Queue[Event | None] = asyncio.Queue(self._sub_max if maxsize is None else maxsize)
+        with self._lock:
+            self._subscribers.append((asyncio.get_running_loop(), queue))
+        return queue
+
+    def unsubscribe(self, queue: asyncio.Queue[Event | None]) -> None:
+        with self._lock:
+            self._subscribers = [s for s in self._subscribers if s[1] is not queue]
+
     async def stream(self) -> AsyncIterator[Event]:
         """Yield events as they arrive until :meth:`close` is called."""
-        loop = asyncio.get_running_loop()
-        queue: asyncio.Queue[Event | None] = asyncio.Queue(self._sub_max)
-        entry = (loop, queue)
-        with self._lock:
-            self._subscribers.append(entry)
+        queue = self.subscribe()
         try:
             while True:
                 ev = await queue.get()
@@ -155,9 +164,7 @@ class EventRecorder:
                     return
                 yield ev
         finally:
-            with self._lock:
-                if entry in self._subscribers:
-                    self._subscribers.remove(entry)
+            self.unsubscribe(queue)
 
     @property
     def events(self) -> list[Event]:
@@ -202,7 +209,7 @@ class EventRecorder:
                 self._jsonl.close()
                 self._jsonl = None
         for loop, queue in subscribers:
-            loop.call_soon_threadsafe(queue.put_nowait, None)
+            loop.call_soon_threadsafe(self._offer, queue, None)
 
 
 def stage_latencies(

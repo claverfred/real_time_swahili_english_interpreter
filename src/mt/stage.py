@@ -102,7 +102,12 @@ class MtStage:
     def flush(self, end_s: float = 0.0) -> list[MtUpdate]:
         return [self._translate_unit(u) for u in self.aggregator.flush(end_s)]
 
-    def reset(self) -> None:
-        self.aggregator = SentenceAggregator(self.text_cfg)
-        self.history = []
+    def cancel(self) -> None:
+        """Discard held, untranslated text; keep translation context."""
+        self.aggregator.discard()
         self._partial_words, self._partial_segment = 0, None
+
+    def reset(self) -> None:
+        """Cancel and forget translation context (new conversation). Unit ids stay unique."""
+        self.cancel()
+        self.history = []

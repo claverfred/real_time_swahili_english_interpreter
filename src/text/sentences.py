@@ -135,6 +135,10 @@ class SentenceAggregator:
         self._reset_held()
         return [unit]
 
+    def discard(self) -> None:
+        """Drop held text without translating it (cancel). Unit ids keep increasing."""
+        self._reset_held()
+
     def _reset_held(self) -> None:
         self._held = ""
         self._held_segments = []

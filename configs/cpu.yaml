@@ -7,7 +7,27 @@ vad: {backend: webrtc}
 #   base WER 0.94 RTF 0.14 | small WER 0.72 RTF 0.49 | medium WER 0.42 RTF 1.24 | large-v3-turbo WER 0.12 RTF 1.74
 # small is the most accurate model that keeps up in real time here. For offline batch accuracy use
 #   --set asr.model=large-v3-turbo   (about 1.7x slower than real time on this CPU).
-asr: {model: small, compute_type: int8, beam_size: 1, chunk_s: 1.5, overlap_s: 0.5, fallback_models: [base]}
+# Live partials are off on CPU: each partial is a ~2 s whisper-small decode that the end-of-utterance
+# decode then waits behind. Measured 2026-11-21, interpret --live-sim, 30 s clip, 6 utterances:
+#   last speech frame -> first English audio: partials on median 4.1 s (p95 5.2) | off 3.1 s (p95 3.3)
+#   (off: ~0.5 s VAD silence wait, ~1.9 s ASR decode, ~0.5 s MT, ~0.2 s TTS first chunk)
+# Swahili fine-tune of whisper-small (same speed as small). Measured 2026-11-21 with
+# scripts/asr_eval_fleurs.py, beam 1, int8, WER (normalized):
+#   model                                         FLEURS sw test (40 real utts)  synthetic (10, unseen)
+#   small (OpenAI)                                0.791                          0.734
+#   Mollel/ASR-Swahili-Small                      0.297                          0.053
+#   cdli/whisper-small-swahili-afrivoice_cv       0.354                          0.170
+#   ElizabethMwangi/whisper-small-swahili-afrivoice-cv 0.360                     0.138
+#   adoamesh/whisper-small-swh-finetuned          0.290 (trained on FLEURS)      0.192
+#   large-v3-turbo (OpenAI)                       0.349 (3.5x slower)            -
+# Mollel: whisper-small trained on Common Voice 17 Swahili (not FLEURS). Apache-2.0. Converted once to CT2.
+# Beam search on the end-of-utterance decode, measured 2026-11-23 (same script, Mollel):
+#   beam 1: FLEURS WER 0.297, decode p50 2958 ms | synthetic 0.053, 2740 ms
+#   beam 5: FLEURS WER 0.275, decode p50 3311 ms | synthetic 0.021, 3009 ms   (~0.3 s more per sentence)
+# Live tests showed accuracy, not latency, was the bigger problem -> beam 5. Faster: --set asr.beam_size=1
+asr: {model: Mollel/ASR-Swahili-Small, revision: b2bab6c17b39a0d9b17549444535d4018782a958,
+      license: Apache-2.0, compute_type: int8, beam_size: 5, chunk_s: 1.5, overlap_s: 0.5, partials: false,
+      fallback_models: [cdli/whisper-small-swahili-afrivoice_cv, small]}
 # MT choice measured 2026-11-20, FLORES-200 devtest first 200 sentences, CTranslate2 int8, beam 2
 # (scripts/mt_eval.py):
 #   nllb-200-distilled-600M chrF 64.2 BLEU 42.0 p50 719 ms p95 1201 ms, ~845 MB RAM

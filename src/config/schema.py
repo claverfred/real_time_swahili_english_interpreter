@@ -66,11 +66,13 @@ class AsrConfig(_Strict):
     chunk_s: float = Field(1.0, gt=0)
     overlap_s: float = Field(0.5, ge=0)
     stable_prefix_agreement: int = Field(2, ge=1)
+    partials: bool = True            # live partial hypotheses (each one is an extra decode)
     word_timestamps: bool = False
     condition_on_previous_text: bool = False
     no_speech_threshold: float = 0.6
     log_prob_threshold: float = -1.0
     compression_ratio_threshold: float = 2.4
+    corrections_path: str | None = None   # Swahili->Swahili fixes for recurring ASR errors (CSV)
     fallback_models: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")

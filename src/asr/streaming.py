@@ -28,6 +28,7 @@ import numpy as np
 from ..config.schema import AsrConfig
 from ..pipeline.events import EventRecorder, EventType
 from ..vad.segmenter import VadEvent
+from .corrections import AsrCorrections
 from .filters import common_prefix, merge_overlap
 from .types import AsrResult
 
@@ -57,12 +58,17 @@ class AsrUpdate:
 
 class StreamingTranscriber:
     def __init__(self, asr: Transcriber, cfg: AsrConfig, sample_rate: int = 16000,
-                 recorder: EventRecorder | None = None, partials: bool = True) -> None:
+                 recorder: EventRecorder | None = None, partials: bool = True,
+                 corrections: AsrCorrections | None = None) -> None:
         self.asr = asr
         self.cfg = cfg
         self.sr = sample_rate
         self.recorder = recorder
         self.partials = partials
+        if corrections is None:
+            corrections = AsrCorrections.load(cfg.corrections_path) if cfg.corrections_path else AsrCorrections()
+        self.corrections = corrections
+        self.corrections_applied = 0
         self.reset()
 
     def reset(self) -> None:
@@ -79,6 +85,15 @@ class StreamingTranscriber:
         self._previous_final = ""
         self.partial_count = 0
         self.final_count = 0
+
+    def discard(self) -> None:
+        """Drop the segment in progress and any split-overlap carry (cancel); keep counters."""
+        self._chunks, self._new_samples = [], 0
+        self._hyps.clear()
+        self._committed = []
+        self._carry = self._prefix = None
+        self._carry_text = ""
+        self._segment_id = -1
 
     # -- driving ------------------------------------------------------------------------------
     def on_vad_event(self, ev: VadEvent) -> list[AsrUpdate]:
@@ -122,7 +137,8 @@ class StreamingTranscriber:
         res = self.asr.transcribe(audio, fast=True, initial_prompt=self._prompt(),
                                   previous_text=self._previous_final)
         self._interval_s = max(self.cfg.chunk_s, 1.5 * res.inference_ms / 1000.0)
-        hyp = merge_overlap(self._carry_text, res.text).split() if self._carry_text else res.text.split()
+        fixed, _ = self.corrections.apply(res.text)
+        hyp = merge_overlap(self._carry_text, fixed).split() if self._carry_text else fixed.split()
         self._hyps.append(hyp)
         if len(self._hyps) == self._hyps.maxlen:
             agreed = min(common_prefix(self._hyps[0], h) for h in self._hyps)
@@ -148,7 +164,9 @@ class StreamingTranscriber:
         prefix = self._prefix if seg.segment_id == self._segment_id else None
         audio = np.concatenate([prefix, seg.audio]) if prefix is not None else seg.audio
         res = self.asr.transcribe(audio, initial_prompt=self._prompt(), previous_text=self._previous_final)
-        text = merge_overlap(self._carry_text, res.text) if self._carry_text else res.text
+        fixed, n_fixed = self.corrections.apply(res.text)
+        self.corrections_applied += n_fixed
+        text = merge_overlap(self._carry_text, fixed) if self._carry_text else fixed
         final_words = text.split()
         if self._committed and common_prefix(self._committed, final_words) < len(self._committed):
             self._revisions += 1
@@ -168,9 +186,11 @@ class StreamingTranscriber:
         upd = AsrUpdate("final", seg.segment_id, text, stable=text, latency_ms=res.inference_ms,
                         audio_s=len(audio) / self.sr, result=res, revisions=self._revisions,
                         start_s=seg.start_s, end_s=seg.end_s,
-                        extra={"rejected": rejected, "uncertain": res.uncertain, "vad_reason": seg.reason})
+                        extra={"rejected": rejected, "uncertain": res.uncertain, "vad_reason": seg.reason,
+                               "corrections": n_fixed, "original": res.text})
         if self.recorder is not None:
-            self.recorder.emit(EventType.ASR_FINAL, segment_id=seg.segment_id, text=text,
+            fix_info = {"corrections": n_fixed, "original": res.text} if n_fixed else {}
+            self.recorder.emit(EventType.ASR_FINAL, segment_id=seg.segment_id, text=text, **fix_info,
                                latency_ms=res.inference_ms, audio_s=round(upd.audio_s, 3),
                                rtf=round(res.rtf, 4), uncertain=res.uncertain, rejected=rejected,
                                revisions=self._revisions, start_s=round(seg.start_s, 3),

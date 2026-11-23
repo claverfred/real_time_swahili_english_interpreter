@@ -242,6 +242,10 @@ def build_parser() -> argparse.ArgumentParser:
     from .speak import add_parser as add_speak
 
     add_speak(sub, _add_profile_args)
+
+    from .interpret import add_parser as add_interpret
+
+    add_interpret(sub, _add_profile_args)
     return parser
 
 

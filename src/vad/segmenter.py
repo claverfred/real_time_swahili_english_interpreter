@@ -92,6 +92,16 @@ class VadSegmenter:
         self._last_speech = -1
         self._silence_run = 0
 
+    def discard(self) -> None:
+        """Drop speech in progress (cancel) without restarting the timeline or segment ids."""
+        self.backend.reset()
+        self._speaking = False
+        self._preroll.clear()
+        self._candidates = []
+        self._seg = []
+        self._last_speech = -1
+        self._silence_run = 0
+
     @property
     def speaking(self) -> bool:
         return self._speaking

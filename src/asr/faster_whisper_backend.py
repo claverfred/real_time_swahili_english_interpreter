@@ -59,12 +59,22 @@ class FasterWhisperAsr:
         except ImportError as exc:
             raise AsrError('faster-whisper not installed (pip install -e ".[asr]")') from exc
 
+        from .convert import AsrConvertError, ensure_ct2_whisper, is_builtin
+
         revision = None if self.cfg.revision in ("", "main") else self.cfg.revision
         t0 = time.perf_counter()
+        convert_info: dict[str, object] = {}
         try:
-            path = download_model(self.model_name, local_files_only=self.local_files_only,
-                                  cache_dir=str(self.cache_dir) if self.cache_dir else None, revision=revision)
-        except Exception as exc:
+            if is_builtin(self.model_name):
+                path = download_model(self.model_name, local_files_only=self.local_files_only,
+                                      cache_dir=str(self.cache_dir) if self.cache_dir else None, revision=revision)
+            else:   # any Hugging Face Whisper repo (e.g. a Swahili fine-tune): convert once if needed
+                cache_root = self.cache_dir.parent.parent if self.cache_dir else Path("cache")
+                p, convert_info = ensure_ct2_whisper(self.model_name, revision=revision or "main",
+                                                     compute_type=self.compute_type, cache_root=cache_root,
+                                                     local_files_only=self.local_files_only)
+                path = str(p)
+        except (AsrConvertError, Exception) as exc:
             raise AsrError(f"could not obtain model {self.model_name!r}: {exc}") from exc
         t1 = time.perf_counter()
         try:
@@ -79,7 +89,9 @@ class FasterWhisperAsr:
         self.load_info = {
             "model": self.model_name,
             "path": str(p),
-            "resolved_revision": p.name if p.parent.name == "snapshots" else self.cfg.revision,
+            "resolved_revision": convert_info.get("resolved_revision")
+            or (p.name if p.parent.name == "snapshots" else self.cfg.revision),
+            "conversion": convert_info or None,
             "device": self.device,
             "compute_type": self.compute_type,
             "cpu_threads": self.cpu_threads,

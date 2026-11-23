@@ -14,8 +14,8 @@ and HPC (Slurm). Full requirements: [REALTIME_SWAHILI_ENGLISH_SYSTEM.md](REALTIM
 | 3 | Streaming ASR | done |
 | 4 | Text stabilization + MT | done |
 | 5 | Streaming TTS | done |
-| 6 | Async pipeline + Python API + batch/live CLI | next |
-| 7 | FastAPI/WebSocket server + local UI | planned |
+| 6 | Async pipeline + Python API + batch/live CLI | done |
+| 7 | FastAPI/WebSocket server + local UI | in progress |
 | 8 | Evaluation and benchmarks | planned |
 | 9 | Colab notebooks | planned |
 | 10 | HPC Slurm scripts + fine-tuning | planned |
@@ -239,6 +239,134 @@ speech, scored against the text). It is a proxy, not a listening test.
   `configs/pronunciation/sw_names_en.yaml` is **not** enabled by default: the Whisper round
   trip could not show a consistent gain, and capitalized respellings made things worse. Check
   entries by listening, ideally with a Swahili speaker.
+
+## Full pipeline and Python API (Phase 6)
+
+```powershell
+python -m src.cli interpret --input audio.wav --profile cpu                  # batch, as fast as possible
+python -m src.cli interpret --input audio.wav --profile cpu --live-sim --play  # real-time pace, speaker out
+python -m src.cli interpret --mic --seconds 180 --play --profile cpu         # live microphone, turn-taking
+python -m src.cli interpret --input audio.wav --no-tts --export              # text only + run directory
+```
+
+```python
+from src.pipeline import RealtimeSwahiliInterpreter
+
+async with RealtimeSwahiliInterpreter("cpu") as interp:       # start() ... shutdown()
+    await interp.push_audio(chunk, sample_rate=16000)          # float32 or int16, any rate, mono/stereo
+    async for event in interp.events():
+        if event.type == "asr_final":  print("Swahili:", event.text)
+        if event.type == "mt_final":   print("English:", event.text)
+        if event.type == "tts_audio":  play(event.audio, event.data["sample_rate"])
+```
+
+The API also offers `flush()` (end the utterance and wait until it's spoken), `cancel()` (drop
+queued work and stop speaking at the next chunk), `reset()` (cancel and forget context),
+`status()`, `health()`, `model_status()`, `units()`, `summary()` and `shutdown()`.
+
+**How the stages run:**
+- **Three stage workers.** VAD+ASR, MT and TTS each run on their own single thread, so ASR
+  can decode the next utterance while the previous one is translated and spoken.
+- **Bounded queues.** Stages are connected by queues of `streaming.queue_max` items. A slow
+  stage slows its input instead of growing memory. `push_audio(block=False)` drops and counts
+  audio instead of waiting.
+- **Backlog handling.** Audio that piles up while ASR is busy is processed in one pass, and
+  ASR partials that a newer update already replaced are skipped.
+- **Errors stay local.** A failed ASR decode loses only its own segment. A TTS failure after
+  every fallback still delivers the text. Both emit an `error` event, and `health()` reports
+  `degraded`.
+- **Per-unit tracing.** Each translation unit ends with a `pipeline_complete` event carrying
+  its latencies. `--export` writes `transcript_sw.txt`, `translation_en.txt`, `units.jsonl`,
+  `speech_en.wav`, the events and a manifest. With `logging.log_text=false`, no text is
+  written.
+- **Playback metrics.** `--play` measures playback delay and underruns (gaps inside a unit).
+
+**Measured on the local CPU** (`cpu` profile, `--live-sim`, 30 s synthetic Swahili clip, 6
+utterances, one run per setting). Latency is from the last speech frame to the event.
+
+| ASR partials | ASR final | MT final | First English audio p50 / p95 | RAM |
+|---|---|---|---|---|
+| on | 3.4 s | 4.0 s | 4.1 / 5.2 s | ~1.55 GB |
+| **off (cpu default)** | 2.4 s | 2.8 s | **3.1 / 3.3 s** | ~1.55 GB |
+
+- **Partials are off on CPU.** Each partial is another ~2 s Whisper `small` decode, and the
+  end-of-utterance decode waits behind it. They are still available with
+  `--set asr.partials=true` and are worth it on a GPU.
+- **ASR dominates the remaining 3.1 s:** about 0.5 s waiting for silence, about 1.9 s of ASR
+  decoding, about 0.5 s of MT and about 0.2 s for the first TTS chunk.
+- **Translation quality was limited by Whisper `small`** on this CPU. For example, ASR heard
+  "ya nyanya" (of tomatoes) as "yanyanya", which MT then rendered as "a bat". This is why the
+  cpu profile now uses a Swahili fine-tune (see below; same 3.1 s first audio).
+- **Batch latencies are not listener-relevant.** In batch mode audio arrives faster than real
+  time, so the summary labels those numbers as including the backlog.
+
+### Live microphone: turn-taking mode
+
+`--mic --play` defaults to `--mode consecutive`, like a consecutive human interpreter:
+
+1. A spoken "Ready. Please speak Swahili now." and a beep mark the start.
+2. Say one sentence and pause. After 1.2 s of silence the turn ends (`vad.min_silence_ms=1200`
+   in this mode, so short pauses inside a sentence don't cut it).
+3. The mic is muted while the English is spoken, then a beep means "your turn".
+
+- **Echo guard.** The mic is also muted while the speaker is playing, so the interpreter never
+  hears and re-translates its own voice. `--no-echo-guard` turns it off (use with headphones).
+- **Simultaneous mode** (`--mode simultaneous`) keeps listening while speaking. Use it only with
+  headphones.
+- `--no-cue` skips the spoken cue and beeps.
+- Microphone audio is not saved. `--export` writes text, events and the English speech only.
+
+### Swahili speech recognition model
+
+OpenAI Whisper `small` is not good enough at Swahili. The cpu profile now uses a Swahili
+fine-tune of `small` with the same speed. Any Hugging Face Whisper checkpoint can be set as
+`asr.model`. It is converted once to CTranslate2 in `cache/ct2/asr/` (with a
+`provenance.json`) by [src/asr/convert.py](src/asr/convert.py). The conversion needs
+`transformers` and `torch` once; running it needs neither.
+
+Model comparison measured with `scripts/asr_eval_fleurs.py` (beam 1, int8, normalized WER; FLEURS data from
+`scripts/fetch_fleurs_sw.py`, CC-BY-4.0):
+
+| Model | FLEURS sw test, 40 real utterances | Synthetic, 10 unseen clips | Decode p50 |
+|---|---|---|---|
+| Whisper `small` (OpenAI) | 0.791 | 0.734 | ~2.3 s |
+| **Mollel/ASR-Swahili-Small (cpu default, Apache-2.0)** | **0.297** | **0.053** | ~2.3 s |
+| cdli/whisper-small-swahili-afrivoice_cv (fallback) | 0.354 | 0.170 | ~2.3 s |
+| ElizabethMwangi/whisper-small-swahili-afrivoice-cv | 0.360 | 0.138 | ~2.3 s |
+| adoamesh/whisper-small-swh-finetuned (trained on FLEURS) | 0.290 | 0.192 | ~2.3 s |
+| large-v3-turbo (OpenAI) | 0.349 | – | ~8.1 s |
+
+**Beam search.** Mollel with beam 5 (the cpu default since 2026-11-23) has FLEURS WER 0.275
+and synthetic WER 0.021, against 0.297 and 0.053 with beam 1. Each decode takes about 0.3 s
+longer (p50 3.3 s vs 3.0 s). Use `--set asr.beam_size=1` for lower latency.
+
+- Fine-tunes with their own custom vocabulary (e.g. alphaedge-ai) don't work with
+  faster-whisper. It treats them as English-only.
+- On Windows without Developer Mode, the Hugging Face cache can fail with WinError 1314
+  (symlinks). The converter falls back to a plain-copy download folder.
+
+**Live laptop-mic sessions** (2026-11-23, consecutive mode, beam 1, one speaker, 14 + 11 sentences):
+
+- English started a median of 3.7 s and 3.9 s after the speaker stopped (range 3.2–5.0 s).
+- There were no errors, no echo and no playback gaps.
+- About half the sentences were translated correctly. Nearly all errors came from ASR, not MT:
+  split or misheard formal words ("mwenye kiti" for "mwenyekiti", "madam barimbali" for
+  "mambo mbalimbali"), and names.
+
+### ASR correction list
+
+[configs/asr_corrections/sw.csv](configs/asr_corrections/sw.csv) holds `heard,correct` pairs.
+They rewrite recurring mishearings in the Swahili transcript before translation
+(`asr.corrections_path`; `null` disables it). Matching is whole-word, case-insensitive and
+longest-first. The uncorrected text is kept in the `asr_final` event as `original`, which is
+dropped when `log_text=false`.
+
+Add an entry only after the same mistake shows up more than once, and prefer phrases to
+single words. The list only fixes mistakes it has already seen. Applied to the session it came
+from, it turned "A gentleman with a chair" into "Mr. Chairman", and "the implementation …
+has been successful" into "… would not have been successful". New speech is not helped until
+its mistakes are added.
+
 ## Configuration
 
 Profiles live in `configs/` and inherit through `inherits:`. Precedence (highest first):

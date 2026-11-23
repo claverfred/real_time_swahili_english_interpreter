@@ -48,6 +48,7 @@ asr:
   no_speech_threshold: 0.6
   log_prob_threshold: -1.0
   compression_ratio_threshold: 2.4
+  corrections_path: configs/asr_corrections/sw.csv   # recurring mishearings -> fixed before MT; null disables
   fallback_models: [small]
 
 text:
