@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Swahili → English Interpreter</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <h1>Swahili → English interpreter</h1>
+  <div id="model-status" class="pill">Connecting…</div>
+</header>
+
+<main>
+  <section class="card" id="live-card">
+    <div class="card-head">
+      <h2>Live microphone</h2>
+      <span class="hint">Speak Swahili; hear English.</span>
+    </div>
+
+    <div class="controls">
+      <label>Microphone
+        <select id="mic-select"><option value="">Default microphone</option></select>
+      </label>
+      <label>Speaker
+        <select id="out-select"><option value="">Default speaker</option></select>
+      </label>
+      <label>Mode
+        <select id="mode-select">
+          <option value="consecutive">Turn-taking (speak, pause, listen)</option>
+          <option value="simultaneous">Continuous (keep talking)</option>
+        </select>
+      </label>
+    </div>
+    <div class="controls checks">
+      <label class="check"><input type="checkbox" id="headphones"> I'm wearing headphones (keep mic open while English plays)</label>
+      <label class="check"><input type="checkbox" id="save" checked> Save transcript and English audio on this computer</label>
+      <label class="check"><input type="checkbox" id="speak" checked> Speak the English</label>
+    </div>
+    <p class="consent" id="consent"></p>
+    <label class="check consent-check"><input type="checkbox" id="consent-ok"> Everyone being recorded has agreed.</label>
+
+    <div class="buttons">
+      <button id="start-btn" class="primary" disabled>Start</button>
+      <button id="stop-btn" disabled>Stop</button>
+      <button id="cancel-btn" disabled title="Drop what is being interpreted and stop speaking">Cancel current</button>
+    </div>
+
+    <div id="turn" class="turn idle" aria-live="polite">Not started</div>
+    <div class="meter"><div id="level"></div></div>
+    <div id="hearing" class="hearing"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Interpretation</h2>
+      <span class="hint" id="latency-summary"></span>
+    </div>
+    <ol id="units" class="units"></ol>
+    <p id="empty" class="hint">The Swahili and its English translation appear here, sentence by sentence.</p>
+    <div id="downloads" class="downloads"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Interpret an audio file</h2>
+      <span class="hint" id="upload-limits"></span>
+    </div>
+    <form id="upload-form" class="controls">
+      <input type="file" id="upload-file" accept="audio/*,.wav,.flac,.ogg,.mp3,.m4a">
+      <label class="check"><input type="checkbox" id="upload-tts" checked> Also make English speech</label>
+      <button type="submit" id="upload-btn" disabled>Interpret file</button>
+    </form>
+    <div id="upload-status" class="hint"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>System</h2></div>
+    <dl id="system" class="system"></dl>
+    <div id="log" class="log"></div>
+  </section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

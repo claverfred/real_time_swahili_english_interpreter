@@ -180,6 +180,21 @@ class PrivacyConfig(_Strict):
     session_timeout_min: int = Field(60, gt=0)
 
 
+class ServerConfig(_Strict):
+    """``serve``: local FastAPI/WebSocket server and browser UI."""
+    host: str = "127.0.0.1"          # loopback only; any other host requires a token
+    port: int = Field(8000, ge=1, le=65535)
+    token_env: str = "SWI_SERVER_TOKEN"   # read the access token from this environment variable
+    require_token: bool = False      # also on loopback (always on for other hosts)
+    allowed_origins: list[str] = Field(default_factory=list)   # extra browser origins besides the server's own
+    max_session_s: float = Field(1800.0, gt=0)      # a live session is stopped after this long
+    idle_timeout_s: float = Field(120.0, gt=0)      # ... or after this long without any client message
+    max_ws_message_bytes: int = Field(1_048_576, gt=0)   # one audio frame / control message
+    rate_limit_per_min: int = Field(120, gt=0)      # HTTP API requests per client address
+    preload: bool = True             # load models at startup (first session starts immediately)
+    consecutive_silence_ms: int = Field(1200, ge=100)   # end-of-turn silence in turn-taking mode
+
+
 class InterpreterConfig(_Strict):
     profile: str
     description: str = ""
@@ -195,6 +210,7 @@ class InterpreterConfig(_Strict):
     storage: StorageConfig = Field(default_factory=StorageConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     privacy: PrivacyConfig = Field(default_factory=PrivacyConfig)
+    server: ServerConfig = Field(default_factory=ServerConfig)
 
     @model_validator(mode="after")
     def _privacy_guard(self) -> InterpreterConfig:

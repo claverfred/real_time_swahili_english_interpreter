@@ -1,0 +1,60 @@
+:root {
+  --bg: #f6f7f9; --card: #ffffff; --text: #1d232b; --muted: #5d6875; --line: #dde2e8;
+  --accent: #1f6feb; --accent-text: #ffffff; --ok: #1a7f37; --warn: #9a6700; --bad: #cf222e;
+  --sw: #6639ba; --en: #0b5cad; --chip: #eef1f5;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1216; --card: #171b21; --text: #e6e9ed; --muted: #9aa4af; --line: #2a313a;
+    --accent: #4c8dff; --accent-text: #0b0e12; --ok: #3fb950; --warn: #d29922; --bad: #f85149;
+    --sw: #b392f0; --en: #79b8ff; --chip: #222831;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+       font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+       padding: 14px 16px; border-bottom: 1px solid var(--line); background: var(--card); flex-wrap: wrap; }
+h1 { font-size: 18px; margin: 0; }
+h2 { font-size: 16px; margin: 0; }
+main { max-width: 980px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+             flex-wrap: wrap; margin-bottom: 12px; }
+.hint { color: var(--muted); font-size: 13px; }
+.pill { font-size: 13px; padding: 3px 10px; border-radius: 999px; background: var(--chip); color: var(--muted); }
+.pill.ok { color: var(--ok); } .pill.warn { color: var(--warn); } .pill.bad { color: var(--bad); }
+.controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-bottom: 10px; }
+.controls label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); min-width: 200px; flex: 1; }
+.controls.checks { display: grid; gap: 6px; }
+label.check { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--text); min-width: 0; }
+select, input[type=file] { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px;
+                           background: var(--bg); color: var(--text); max-width: 100%; }
+.consent { font-size: 13px; color: var(--muted); margin: 8px 0 4px; }
+.buttons { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+button { font: inherit; padding: 8px 16px; border-radius: 6px; border: 1px solid var(--line);
+         background: var(--chip); color: var(--text); cursor: pointer; }
+button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+.turn { font-size: 20px; font-weight: 600; padding: 14px; border-radius: 8px; text-align: center;
+        background: var(--chip); color: var(--muted); }
+.turn.speak { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+.turn.busy { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.turn.error { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); }
+.meter { height: 6px; background: var(--chip); border-radius: 3px; margin-top: 10px; overflow: hidden; }
+#level { height: 100%; width: 0; background: var(--ok); transition: width 80ms linear; }
+.hearing { min-height: 1.5em; margin-top: 8px; color: var(--muted); font-style: italic; }
+.units { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.units li { border-left: 3px solid var(--line); padding: 4px 0 4px 12px; }
+.units .sw { color: var(--sw); }
+.units .en { color: var(--en); font-weight: 600; font-size: 16px; }
+.units .lat { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.chip { font-size: 12px; background: var(--chip); color: var(--muted); padding: 1px 8px; border-radius: 999px; }
+.chip.flag { color: var(--warn); }
+.downloads { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+.downloads a { color: var(--accent); }
+.system { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; font-size: 13px; }
+.system dt { color: var(--muted); } .system dd { margin: 0; word-break: break-word; }
+.log { margin-top: 10px; font: 12px/1.4 ui-monospace, Consolas, monospace; color: var(--muted);
+       max-height: 140px; overflow-y: auto; white-space: pre-wrap; }
+@media (max-width: 600px) { .controls label { min-width: 100%; } .turn { font-size: 17px; } }

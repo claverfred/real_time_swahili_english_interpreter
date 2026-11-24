@@ -130,3 +130,16 @@ privacy:
   retention_days: 30
   delete_temp_audio: true
   session_timeout_min: 60
+
+server:                  # python -m src.cli serve
+  host: 127.0.0.1        # loopback only; any other host always requires a token
+  port: 8000
+  token_env: SWI_SERVER_TOKEN
+  require_token: false   # also require the token on loopback
+  allowed_origins: []    # extra browser origins allowed besides the server's own
+  max_session_s: 1800
+  idle_timeout_s: 120
+  max_ws_message_bytes: 1048576
+  rate_limit_per_min: 120
+  preload: true          # load models at startup so the first session starts at once
+  consecutive_silence_ms: 1200

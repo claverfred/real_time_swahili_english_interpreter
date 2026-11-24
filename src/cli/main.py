@@ -246,6 +246,10 @@ def build_parser() -> argparse.ArgumentParser:
     from .interpret import add_parser as add_interpret
 
     add_interpret(sub, _add_profile_args)
+
+    from .serve import add_parser as add_serve
+
+    add_serve(sub, _add_profile_args)
     return parser
 
 

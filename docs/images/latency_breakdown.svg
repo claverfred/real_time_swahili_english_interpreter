@@ -1,0 +1,26 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='860' height='242' viewBox='0 0 860 242' role='img' aria-label='Where the 3.1 s goes: speaker stops → first English audio' font-family='Segoe UI, system-ui, -apple-system, Helvetica, Arial, sans-serif'>
+<title>Where the 3.1 s goes: speaker stops → first English audio</title>
+<rect width='860' height='242' rx='8' fill='#fcfcfb' stroke='#e1e0d9'/>
+<text x='24.0' y='30.0' font-size='17' fill='#0b0b0b' text-anchor='start' font-weight='600'>Where the 3.1 s goes: speaker stops → first English audio</text>
+<text x='24.0' y='52.0' font-size='12.5' fill='#52514e' text-anchor='start' font-weight='normal'>cpu profile, Phase 6 live simulation, ASR beam 1, partials off (median per stage)</text>
+<rect x='24.0' y='92' width='129.0' height='34' rx='4' fill='#2a78d6'/>
+<text x='88.5' y='114.0' font-size='13' fill='#ffffff' text-anchor='middle' font-weight='600'>0.5 s</text>
+<rect x='155.0' y='92' width='495.7' height='34' rx='4' fill='#eb6834'/>
+<text x='402.8' y='114.0' font-size='13' fill='#ffffff' text-anchor='middle' font-weight='600'>1.9 s</text>
+<rect x='652.6' y='92' width='129.0' height='34' rx='4' fill='#1baf7a'/>
+<text x='717.1' y='114.0' font-size='13' fill='#ffffff' text-anchor='middle' font-weight='600'>0.5 s</text>
+<rect x='783.6' y='92' width='52.4' height='34' rx='4' fill='#eda100'/>
+<text x='24.0' y='144.0' font-size='11.5' fill='#898781' text-anchor='middle' font-weight='normal'>0 s</text>
+<text x='285.9' y='144.0' font-size='11.5' fill='#898781' text-anchor='middle' font-weight='normal'>1 s</text>
+<text x='547.9' y='144.0' font-size='11.5' fill='#898781' text-anchor='middle' font-weight='normal'>2 s</text>
+<text x='809.8' y='144.0' font-size='11.5' fill='#898781' text-anchor='middle' font-weight='normal'>3 s</text>
+<rect x='24' y='164' width='12' height='12' rx='3' fill='#2a78d6'/>
+<text x='42.0' y='174.0' font-size='12.5' fill='#52514e' text-anchor='start' font-weight='normal'>Waiting for silence (VAD)  0.5 s</text>
+<rect x='424' y='164' width='12' height='12' rx='3' fill='#eb6834'/>
+<text x='442.0' y='174.0' font-size='12.5' fill='#52514e' text-anchor='start' font-weight='normal'>Swahili recognition (ASR)  1.9 s</text>
+<rect x='24' y='186' width='12' height='12' rx='3' fill='#1baf7a'/>
+<text x='42.0' y='196.0' font-size='12.5' fill='#52514e' text-anchor='start' font-weight='normal'>Translation (MT)  0.5 s</text>
+<rect x='424' y='186' width='12' height='12' rx='3' fill='#eda100'/>
+<text x='442.0' y='196.0' font-size='12.5' fill='#52514e' text-anchor='start' font-weight='normal'>First English audio (TTS)  0.2 s</text>
+<text x='24.0' y='226.0' font-size='11.5' fill='#898781' text-anchor='start' font-weight='normal'>Speech recognition is ~60% of the delay; with beam 5 (current default) it is ~0.3 s longer.</text>
+</svg>

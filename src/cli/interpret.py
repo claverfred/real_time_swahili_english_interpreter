@@ -23,7 +23,6 @@ import numpy as np
 from ..config import load_config
 from ..pipeline import EventType, RealtimeSwahiliInterpreter
 from ..platform.storage import prepare_storage
-from ..utils.manifest import build_manifest, new_run_dir, write_manifest
 
 DIM, RESET = "\x1b[2m", "\x1b[0m"
 
@@ -257,26 +256,11 @@ async def _run(args: argparse.Namespace, cfg: Any) -> int:
     if args.output and len(wav):
         print(f"wrote {save_wav(args.output, wav, out_sr)}", file=sys.stderr)
     if args.export:
-        run_dir = new_run_dir(paths["output_dir"], "interpret")
-        keep_text = cfg.logging.log_text
-        if keep_text:
-            (run_dir / "transcript_sw.txt").write_text(
-                "\n".join(u["swahili"] for u in units) + "\n", encoding="utf-8")
-            (run_dir / "translation_en.txt").write_text(
-                "\n".join(u["english"] for u in units) + "\n", encoding="utf-8")
-        rows = [u if keep_text else {**u, "swahili": None, "english": None} for u in units]
-        (run_dir / "units.jsonl").write_text(
-            "".join(json.dumps(r, ensure_ascii=False, default=str) + "\n" for r in rows), encoding="utf-8")
-        if len(wav):
-            save_wav(run_dir / "speech_en.wav", wav, out_sr)
-        interp.recorder.export_jsonl(run_dir / "events.jsonl")
-        interp.recorder.export_csv(run_dir / "events.csv")
+        from ..pipeline.export import export_session
+
         mode = "interpret-mic" if args.mic else "interpret-live-sim" if args.live_sim else "interpret-batch"
-        write_manifest(run_dir, build_manifest(
-            run_id=run_dir.name, mode=mode, config=cfg.model_dump(mode="json", by_alias=True),
-            runtime=interp.runtime.to_dict(), fallbacks=interp.fallbacks,
-            extra={"input": info.to_dict() if info else {"source": "microphone"}, "levels": levels,
-                   "models": interp.model_status(), "summary": summary,
-                   "text_logged": keep_text}))
+        run_dir = export_session(
+            interp, paths["output_dir"], mode=mode, speech=wav, speech_sr=out_sr, summary=summary,
+            extra={"input": info.to_dict() if info else {"source": "microphone"}, "levels": levels})
         print(f"exported to {run_dir}", file=sys.stderr)
     return 3 if interp.state == "failed" else 0
