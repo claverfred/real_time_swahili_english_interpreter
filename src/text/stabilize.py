@@ -67,6 +67,14 @@ def stabilize(text: str, cfg: TextConfig | None = None, *, final: bool = True,
         changes.append("repeat_collapsed")
         out = collapsed
 
+    if cfg.number_words_to_digits:
+        from .sw_numbers import number_words_to_digits
+
+        digits, n = number_words_to_digits(out)
+        if n:
+            changes.append("number_words_to_digits")
+            out = digits
+
     spaced = _MISSING_SPACE_AFTER.sub(r"\1 ", _SPACE_BEFORE_PUNCT.sub(r"\1", out))
     spaced = _REPEAT_PUNCT.sub(lambda m: m.group(1) or ".", spaced)
     if spaced != out:

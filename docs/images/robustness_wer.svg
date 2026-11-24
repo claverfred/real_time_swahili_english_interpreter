@@ -1,0 +1,45 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='860' height='442' viewBox='0 0 860 442' role='img' aria-label='Robustness: Swahili word error rate under degraded audio (lower is better)' font-family='Segoe UI, system-ui, -apple-system, Helvetica, Arial, sans-serif'>
+<title>Robustness: Swahili word error rate under degraded audio (lower is better)</title>
+<rect width='860' height='442' rx='8' fill='#fcfcfb' stroke='#e1e0d9'/>
+<text x='24.0' y='30.0' font-size='17' fill='#0b0b0b' text-anchor='start' font-weight='600'>Robustness: Swahili word error rate under degraded audio (lower is better)</text>
+<text x='24.0' y='52.0' font-size='12.5' fill='#52514e' text-anchor='start' font-weight='normal'>Same 60 FLEURS recordings per condition, cpu profile, evaluate speech --conditions. Blue = clean audio</text>
+<line x1='354.0' x2='354.0' y1='72' y2='384' stroke='#e1e0d9' stroke-width='1'/>
+<text x='354.0' y='402.0' font-size='11.5' fill='#898781' text-anchor='middle' font-weight='normal'>0</text>
+<line x1='463.0' x2='463.0' y1='72' y2='384' stroke='#e1e0d9' stroke-width='1'/>
+<text x='463.0' y='402.0' font-size='11.5' fill='#898781' text-anchor='middle' font-weight='normal'>0.20</text>
+<line x1='572.0' x2='572.0' y1='72' y2='384' stroke='#e1e0d9' stroke-width='1'/>
+<text x='572.0' y='402.0' font-size='11.5' fill='#898781' text-anchor='middle' font-weight='normal'>0.40</text>
+<line x1='681.0' x2='681.0' y1='72' y2='384' stroke='#e1e0d9' stroke-width='1'/>
+<text x='681.0' y='402.0' font-size='11.5' fill='#898781' text-anchor='middle' font-weight='normal'>0.60</text>
+<line x1='790.0' x2='790.0' y1='72' y2='384' stroke='#e1e0d9' stroke-width='1'/>
+<text x='790.0' y='402.0' font-size='11.5' fill='#898781' text-anchor='middle' font-weight='normal'>0.80</text>
+<text x='342.0' y='92.0' font-size='13' fill='#0b0b0b' text-anchor='end' font-weight='600'>Clean</text>
+<rect x='354' y='78' width='140.1' height='18' rx='4' fill='#2a78d6'/>
+<text x='502.1' y='92.0' font-size='12.5' fill='#0b0b0b' text-anchor='start' font-weight='600'>0.26</text>
+<text x='342.0' y='126.0' font-size='13' fill='#52514e' text-anchor='end' font-weight='normal'>Faster speech (1.15×)</text>
+<rect x='354' y='112' width='152.6' height='18' rx='4' fill='#c3c2b7'/>
+<text x='514.6' y='126.0' font-size='12.5' fill='#0b0b0b' text-anchor='start' font-weight='normal'>0.28</text>
+<text x='342.0' y='160.0' font-size='13' fill='#52514e' text-anchor='end' font-weight='normal'>Slower speech (0.85×)</text>
+<rect x='354' y='146' width='164.6' height='18' rx='4' fill='#c3c2b7'/>
+<text x='526.6' y='160.0' font-size='12.5' fill='#0b0b0b' text-anchor='start' font-weight='normal'>0.30</text>
+<text x='342.0' y='194.0' font-size='13' fill='#52514e' text-anchor='end' font-weight='normal'>Pink noise, 20 dB SNR</text>
+<rect x='354' y='180' width='184.8' height='18' rx='4' fill='#c3c2b7'/>
+<text x='546.8' y='194.0' font-size='12.5' fill='#0b0b0b' text-anchor='start' font-weight='normal'>0.34</text>
+<text x='342.0' y='228.0' font-size='13' fill='#52514e' text-anchor='end' font-weight='normal'>Quiet (−20 dB)</text>
+<rect x='354' y='214' width='232.2' height='18' rx='4' fill='#c3c2b7'/>
+<text x='594.2' y='228.0' font-size='12.5' fill='#0b0b0b' text-anchor='start' font-weight='normal'>0.43</text>
+<text x='342.0' y='262.0' font-size='13' fill='#52514e' text-anchor='end' font-weight='normal'>Telephone band (300–3400 Hz, 8 kHz)</text>
+<rect x='354' y='248' width='245.2' height='18' rx='4' fill='#c3c2b7'/>
+<text x='607.2' y='262.0' font-size='12.5' fill='#0b0b0b' text-anchor='start' font-weight='normal'>0.45</text>
+<text x='342.0' y='296.0' font-size='13' fill='#52514e' text-anchor='end' font-weight='normal'>Reverberation, RT60 0.6 s</text>
+<rect x='354' y='282' width='277.4' height='18' rx='4' fill='#c3c2b7'/>
+<text x='639.4' y='296.0' font-size='12.5' fill='#0b0b0b' text-anchor='start' font-weight='normal'>0.51</text>
+<text x='342.0' y='330.0' font-size='13' fill='#52514e' text-anchor='end' font-weight='normal'>Pink noise, 10 dB SNR</text>
+<rect x='354' y='316' width='281.2' height='18' rx='4' fill='#c3c2b7'/>
+<text x='643.2' y='330.0' font-size='12.5' fill='#0b0b0b' text-anchor='start' font-weight='normal'>0.52</text>
+<text x='342.0' y='364.0' font-size='13' fill='#52514e' text-anchor='end' font-weight='normal'>Pink noise, 5 dB SNR</text>
+<rect x='354' y='350' width='398.9' height='18' rx='4' fill='#c3c2b7'/>
+<text x='760.9' y='364.0' font-size='12.5' fill='#0b0b0b' text-anchor='start' font-weight='normal'>0.73</text>
+<line x1='354' x2='354' y1='72' y2='384' stroke='#c3c2b7'/>
+<text x='24.0' y='428.0' font-size='11.5' fill='#898781' text-anchor='start' font-weight='normal'>Speaking rate barely matters; noise at 10 dB or below, reverb and telephone audio roughly double the errors.</text>
+</svg>

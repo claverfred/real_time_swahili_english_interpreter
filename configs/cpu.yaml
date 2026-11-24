@@ -25,9 +25,17 @@ vad: {backend: webrtc}
 #   beam 1: FLEURS WER 0.297, decode p50 2958 ms | synthetic 0.053, 2740 ms
 #   beam 5: FLEURS WER 0.275, decode p50 3311 ms | synthetic 0.021, 3009 ms   (~0.3 s more per sentence)
 # Live tests showed accuracy, not latency, was the bigger problem -> beam 5. Faster: --set asr.beam_size=1
+# Temperature fallback off, measured 2026-11-24 (evaluate speech, all 487 FLEURS sw_ke test; evaluate latency,
+# 30 recordings streamed at real time with TTS):
+#   temperatures [0.0..1.0]: WER 0.272, speech->English chrF 48.38, decode p99 48 s, first audio p95 8.61 p99 15.36 s
+#   temperatures [0.0]:      WER 0.274, speech->English chrF 48.14, decode p99 14.7 s, first audio p95 5.12 p99 5.70 s
+# Same accuracy (within the 95% CIs); the retries only produced multi-second latency spikes.
 asr: {model: Mollel/ASR-Swahili-Small, revision: b2bab6c17b39a0d9b17549444535d4018782a958,
       license: Apache-2.0, compute_type: int8, beam_size: 5, chunk_s: 1.5, overlap_s: 0.5, partials: false,
-      fallback_models: [cdli/whisper-small-swahili-afrivoice_cv, small]}
+      temperatures: [0.0], fallback_models: [cdli/whisper-small-swahili-afrivoice_cv, small]}
+# Number words -> digits before MT, measured 2026-11-24 on the 487 FLEURS ASR outputs (offline A/B):
+#   off: English number recall 0.08, chrF 48.94 | on: number recall 0.54, chrF 49.03 (86 sentences changed)
+text: {number_words_to_digits: true}
 # MT choice measured 2026-11-20, FLORES-200 devtest first 200 sentences, CTranslate2 int8, beam 2
 # (scripts/mt_eval.py):
 #   nllb-200-distilled-600M chrF 64.2 BLEU 42.0 p50 719 ms p95 1201 ms, ~845 MB RAM

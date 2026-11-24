@@ -116,6 +116,33 @@ def main() -> None:
         5.0, [0, 1, 2, 3, 4, 5], lambda v: f"{v:.1f} s" if v else "0",
         "Live mic: real speech, 14 + 11 sentences. 30 s clip: synthetic speech, 6 sentences. Server run reused cached translations.")
     stacked_breakdown("latency_breakdown.svg")
+    hbar_chart(
+        "robustness_wer.svg",
+        "Robustness: Swahili word error rate under degraded audio (lower is better)",
+        "Same 60 FLEURS recordings per condition, cpu profile, evaluate speech --conditions. Blue = clean audio",
+        [("Clean", 0.257, True),
+         ("Faster speech (1.15×)", 0.280, False),
+         ("Slower speech (0.85×)", 0.302, False),
+         ("Pink noise, 20 dB SNR", 0.339, False),
+         ("Quiet (−20 dB)", 0.426, False),
+         ("Telephone band (300–3400 Hz, 8 kHz)", 0.450, False),
+         ("Reverberation, RT60 0.6 s", 0.509, False),
+         ("Pink noise, 10 dB SNR", 0.516, False),
+         ("Pink noise, 5 dB SNR", 0.732, False)],
+        0.8, [0, 0.2, 0.4, 0.6, 0.8], lambda v: f"{v:.2f}" if v else "0",
+        "Speaking rate barely matters; noise at 10 dB or below, reverb and telephone audio roughly double the errors.")
+    hbar_chart(
+        "latency_tail.svg",
+        "Speaker stops → first English audio, before and after disabling temperature fallback",
+        "30 real FLEURS recordings streamed at real time with TTS, cpu profile. Blue = current default (temperatures [0.0])",
+        [("Median, fallback on", 3.56, False),
+         ("Median, fallback off", 3.44, True),
+         ("95th percentile, fallback on", 8.61, False),
+         ("95th percentile, fallback off", 5.12, True),
+         ("99th percentile, fallback on", 15.36, False),
+         ("99th percentile, fallback off", 5.70, True)],
+        16.0, [0, 4, 8, 12, 16], lambda v: f"{v:.1f} s" if v else "0",
+        "Accuracy was unchanged (WER 0.272 vs 0.274 on all 487 recordings); the retries only added latency spikes.")
     for p in sorted(OUT.glob("*.svg")):
         print("wrote", p)
 

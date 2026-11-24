@@ -137,6 +137,8 @@ class FasterWhisperAsr:
         )
         if fast:
             kwargs.update(temperature=0.0, without_timestamps=True)
+        else:
+            kwargs.update(temperature=tuple(self.cfg.temperatures or [0.0]))
         t0 = time.perf_counter()
         try:
             seg_iter, info = self._model.transcribe(audio.astype(np.float32, copy=False), **kwargs)

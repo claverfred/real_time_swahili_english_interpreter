@@ -79,7 +79,7 @@ relevant, measured on the local CPU before the next one starts.
 | 5 | Streaming speech synthesis (TTS) | ✅ Done |
 | 6 | Async pipeline, Python API, batch/live CLI, turn-taking mode | ✅ Done |
 | 7 | FastAPI/WebSocket server + browser UI | ✅ Done. Tested end to end in headless Edge with a recording as the microphone. A test with a real microphone in a browser is pending. |
-| 8 | Systematic evaluation and benchmarks | ⏳ Planned. Some measurements already exist (below). |
+| 8 | Systematic evaluation and benchmarks | ✅ Done: `evaluate` CLI, full FLEURS speech→English benchmark, robustness, real-time latency, MT on full FLORES devtest. Human ratings: kit ready, no ratings collected yet. |
 | 9 | Google Colab notebooks | ⏳ Planned (config profile exists, not yet run) |
 | 10 | HPC Slurm scripts + ASR fine-tuning | ⏳ Planned (config profiles exist, not yet run) |
 | 11 | Documentation, Docker, release | ⏳ Planned |
@@ -99,13 +99,16 @@ relevant, measured on the local CPU before the next one starts.
 | Browser UI, WebSocket API, file upload, downloads, model pool, access control | ✅ Completed |
 | ASR model selection on real Swahili speech (FLEURS) and beam-size choice | ✅ Completed |
 | Export of transcripts, translations, events, English audio and manifest per run | ✅ Completed |
+| Evaluation harness (`python -m src.cli evaluate speech / latency / mt / human-sheet / human-score`, `benchmark`) | ✅ Completed |
+| Swahili number words → digits before translation (`text.number_words_to_digits`) | ✅ On in `cpu` (English number recall 0.08 → 0.54, chrF unchanged) |
+| Temperature fallback off on final decodes (`asr.temperatures: [0.0]`) | ✅ On in `cpu` (p99 delay 15.4 s → 5.7 s, same WER) |
 | ASR correction list (`configs/asr_corrections/sw.csv`) | 🧪 Experimental, on by default. Fixes only mistakes it has already seen. |
 | Continuous ("simultaneous") mode | 🧪 Works, but needs headphones |
 | ASR partial results and partial translation | 🧪 Off on CPU (adds about 1 s of delay); intended for GPU |
 | Name pronunciation dictionary for English TTS | 🧪 Supported, not enabled (no measured gain) |
 | Kokoro (local) and Edge (cloud) voices | 🧪 Opt-in (too slow on this CPU; Edge sends text to Microsoft) |
 | GPU, Colab and HPC profiles (`balanced`, `accuracy`, `realtime`, `colab`, `hpc*`) | ⏳ Configured but **not measured** |
-| Human ratings of translation and voice quality; larger real-speech benchmarks | ⏳ Phase 8 |
+| Human ratings of translation and voice quality | 🧪 Rating kit and protocol ready ([docs/human_evaluation.md](docs/human_evaluation.md)); **no ratings collected yet** |
 | Fine-tuning Swahili ASR on local data | ⏳ Phase 10 |
 | Docker image, release packaging | ⏳ Phase 11 |
 
@@ -120,17 +123,19 @@ latency tests but easier than real speech.
 
 | What | Result | Conditions |
 |---|---|---|
-| **End-to-end delay** (speaker stops → first English audio) | **2.7–3.3 s median** (server / browser), 3.7–3.9 s on a live laptop mic | 30 s synthetic clip streamed in real time; two live mic sessions with real speech (beam 1) |
+| **End-to-end delay** (speaker stops → first English audio) | **3.44 s median, 5.12 s p95, 5.70 s p99** | 30 real FLEURS recordings (8.6 min) streamed at real time, TTS on |
+| End-to-end delay, other setups | 2.7–3.3 s median (server / browser), 3.7–3.9 s on a live laptop mic | 30 s synthetic clip; two live mic sessions with real speech (beam 1) |
 | Live mic sessions | 25 sentences, 0 errors, 0 echo loops, 0 playback gaps; ~half translated correctly | One speaker, laptop mic, turn-taking mode |
-| **Swahili ASR word error rate**, real speech | **0.275** (OpenAI Whisper small: 0.791) | FLEURS sw test, 40 utterances |
+| **Swahili ASR word error rate**, real speech | **0.272** (95% CI 0.256–0.288); CER 0.092 | All 487 FLEURS sw_ke test recordings, full deployed pipeline |
+| **Swahili speech → English text** | **BLEU 21.3, chrF 48.4** (95% CI 47.4–49.6) | same 487 recordings vs human FLORES-200 English |
 | Swahili ASR WER, synthetic speech | **0.021** (Whisper small: 0.734) | 10 unseen synthetic clips |
-| **Translation quality** (text in) | **BLEU 42.0, chrF 64.2** | FLORES-200 devtest, 200 sentences, NLLB-600M int8 |
-| Translation speed | 0.72 s median, 1.2 s p95 per sentence | same |
+| **Translation quality** (text in) | **BLEU 39.0, chrF 61.6** (95% CI 60.8–62.5) | Full FLORES-200 devtest, 1012 sentences, NLLB-600M int8 |
+| Translation speed | 0.69 s median, 1.13 s p95 per sentence | same |
 | **English TTS** first audio | 0.22 s median, real-time factor 0.06 | Piper libritts_r, 33 sentences |
 | TTS intelligibility (Whisper round-trip WER) | 0.074 overall, 0.21 on names & numbers | same |
 | Browser end-to-end test | 6 of 6 sentences correct on screen, no browser errors | Headless Edge, fake mic from a 30 s clip, continuous mode |
 | Memory | ~1.55 GB RSS for the full pipeline | `cpu` profile |
-| Automated tests | 167 passing (161 fast + 6 slow); ruff clean | `pytest` |
+| Automated tests | 193 passing (187 fast + 6 slow); ruff clean | `pytest` |
 
 ![Bar chart: word error rate on FLEURS Swahili for seven ASR configurations; the Swahili fine-tune Mollel/ASR-Swahili-Small with beam 5 is lowest at 0.28 and OpenAI Whisper small is highest at 0.79](docs/images/asr_wer_fleurs.svg)
 
@@ -151,6 +156,77 @@ latency tests but easier than real speech.
 
 The charts are generated by [scripts/make_readme_figures.py](scripts/make_readme_figures.py)
 from the numbers in this README.
+
+### Phase 8 benchmarks
+
+All runs use the `evaluate` command. Each run writes `results.json`, `report.md`, per-item
+`items.jsonl` and a manifest (models, revisions, dataset revision, config hash) to
+`results/eval-*`. Confidence intervals are 95% bootstrap intervals over sentences.
+
+```powershell
+python -m src.cli evaluate speech --profile cpu --dataset fleurs              # ASR + speech→English
+python -m src.cli evaluate speech --profile cpu --n 60 --no-oracle --conditions clean noise_20db `
+    noise_10db noise_5db quiet_-20db reverb_0.6s fast_1.15x slow_0.85x telephone
+python -m src.cli evaluate latency --profile cpu --n 30 --offset 400          # real-time pace, TTS on
+python -m src.cli evaluate mt --profile cpu                                   # FLORES-200 devtest
+python -m src.cli benchmark --profile cpu                                     # smaller quick run of all three
+```
+
+**Test data.** All 487 recordings of FLEURS `sw_ke` test (CC-BY-4.0). Every FLEURS
+sentence is a FLORES-200 devtest sentence, so each recording has a human English reference.
+That makes a true speech-to-English score possible, not just ASR WER.
+
+**Full benchmark, 487 recordings** (`cpu` profile, deployed pipeline):
+
+| Measure | Result |
+|---|---|
+| Swahili WER | **0.272** (0.256–0.288); 0.249 when number words and digits count as equal |
+| Swahili CER / exact sentences | 0.092 / 4% |
+| WER by speaker gender | female 0.231 (136 recordings), male 0.287 (351) |
+| Speech → English | **BLEU 21.3** (20.0–22.7), **chrF 48.4** (47.4–49.6) |
+| Same sentences, perfect ASR (human Swahili into MT) | chrF 60.1, so **ASR errors cost 11.7 chrF** |
+| English names kept | 0.57 |
+| English chrF by sentence ASR quality | exact 58.1 · WER ≤ 0.2: 52.7 · 0.2–0.5: 46.1 · > 0.5: 36.7 |
+
+**Translation alone, full FLORES-200 devtest (1012 sentences):** BLEU 39.0 (37.9–40.3),
+chrF 61.6 (60.8–62.5), chrF++ 60.3. Digits kept 0.89, names 0.85, acronyms 0.78; omissions
+1.6%, additions 0%.
+
+**Robustness, 60 recordings × 9 conditions.** Each perturbation is seeded and reproducible
+(`src/eval/perturb.py`).
+
+| Condition | WER | Speech→English chrF | Empty output |
+|---|---|---|---|
+| clean | 0.257 | 46.5 | 0% |
+| faster 1.15× / slower 0.85× | 0.280 / 0.302 | 44.8 / 45.1 | 0% |
+| pink noise 20 dB | 0.339 | 42.4 | 0% |
+| quiet (−20 dB) | 0.426 | 37.4 | 20% |
+| telephone band | 0.450 | 37.3 | 10% |
+| reverb RT60 0.6 s | 0.509 | 36.1 | 0% |
+| pink noise 10 dB | 0.516 | 33.7 | 2% |
+| pink noise 5 dB | 0.732 | 19.8 | 13% |
+
+![Bar chart: Swahili word error rate under nine audio conditions, from 0.26 on clean audio to 0.73 with pink noise at 5 dB SNR](docs/images/robustness_wer.svg)
+
+**Two problems found, two fixes adopted** (both measured before being turned on):
+
+1. **Latency spikes from temperature fallback.** When a decode fails Whisper's quality checks,
+   it retries at higher temperatures. Each retry is a full decode, so 15 of 487 recordings
+   took longer to decode than to speak, the longest about 50 s for 12 s of audio. Turning it
+   off (`asr.temperatures: [0.0]`) kept WER the same (0.272 → 0.274) and chrF the same
+   (48.4 → 48.1), and cut the delay tail:
+
+   ![Bar chart: delay to first English audio. Median 3.56 vs 3.44 s, 95th percentile 8.61 vs 5.12 s, 99th percentile 15.36 vs 5.70 s, with fallback on vs off](docs/images/latency_tail.svg)
+
+2. **Numbers lost in translation.** The ASR writes numbers as Swahili words ("elfu moja mia
+   tisa sitini"), and NLLB often garbles them. Only 8% of reference numbers survived into
+   the English. Converting number words to digits before MT (`text.number_words_to_digits`,
+   which also handles spoken decimals such as "mbili nukta nne" → 2.4) raised English number
+   recall to 0.54, with chrF unchanged. The offline A/B was run on the 487 ASR outputs.
+
+**Not yet done in Phase 8:** human ratings (the kit is ready:
+`evaluate human-sheet` / `human-score`, protocol in
+[docs/human_evaluation.md](docs/human_evaluation.md)); GPU, Colab and HPC profiles; Common Voice.
 
 ---
 
@@ -758,14 +834,20 @@ The config validator refuses:
 ## Limitations and known issues
 
 - **Swahili ASR accuracy.**
-  - Real-speech WER is about 0.28: roughly one word in four is wrong on FLEURS, and in live
-    sessions about half the sentences came out fully right.
-  - Formal vocabulary, compound words and names are the main failure modes.
-  - This is the top priority for Phase 8 (measurement) and Phase 10 (fine-tuning).
-- **Delay.** About 3–4 s from the speaker stopping to English. 1.2 s of that, in turn-taking
-  mode, is the silence needed to decide the turn has ended.
-- **Small and partly synthetic test sets.** 40 FLEURS utterances, a 30 s synthetic clip, and 25
-  live sentences from one speaker. Results will move with larger, more varied data.
+  - Real-speech WER is 0.27 on all 487 FLEURS test recordings: roughly one word in four is
+    wrong, and in live sessions about half the sentences came out fully right.
+  - Errors cost about 12 chrF points of English quality, compared with a perfect transcript.
+  - Formal vocabulary, compound words and names are the main failure modes. Recognition is
+    worse for male speakers (0.29 vs 0.23).
+  - This is the top priority for Phase 10 (fine-tuning).
+- **Noisy, reverberant and telephone audio.** WER roughly doubles at 10 dB SNR, with 0.6 s
+  reverb, or over a telephone band. Quiet input (−20 dB) is missed by the VAD in 20% of
+  recordings.
+- **Delay.** About 3.4 s median and 5–6 s p95/p99 from the speaker stopping to English. 1.2 s
+  of that, in turn-taking mode, is the silence needed to decide the turn has ended. Very long
+  utterances (> 15 s) still delay the next one on CPU.
+- **Test data.** FLEURS is read speech in a quiet room. The live tests had one speaker.
+  Conversational speech, code-switching and regional accents have not been measured.
 - **No human quality ratings yet.** Translation adequacy and voice naturalness have not been
   rated by Swahili/English speakers.
 - **Names.** Every English voice mispronounces East African names.
@@ -783,12 +865,12 @@ src/
   audio/  capture/       file and microphone input, resampling, inspection
   vad/                   Silero (onnx), WebRTC, energy; utterance segmenter
   asr/                   faster-whisper streaming transcriber, filters, corrections, converter
-  text/                  stabilization, Swahili sentence aggregation
+  text/                  stabilization, Swahili sentence aggregation, number words → digits
   mt/                    CTranslate2 / transformers translators, guards, masking, cache
   tts/                   Piper, SAPI, Kokoro, MMS, Edge backends; chunking, spoken form
   pipeline/              RealtimeSwahiliInterpreter (async API), events, export
   server/                FastAPI app, WebSocket live session, model pool, security, static UI
-  eval/                  metrics
+  eval/                  metrics, datasets (FLEURS↔FLORES), perturbations, speech/latency/MT runs, human kit, reports
   platform/  utils/      diagnosis, storage paths, logging, manifests, stats
   cli/                   `python -m src.cli …` commands
 scripts/                 data fetchers, model comparisons, MT/TTS evaluation, README figures
@@ -802,8 +884,8 @@ REALTIME_SWAHILI_ENGLISH_SYSTEM.md   full system specification
 ## Testing
 
 ```powershell
-pytest -m "not slow and not gpu"     # 161 fast tests: config, audio, VAD, ASR, MT, TTS, pipeline, server
-pytest                               # all 167, including slow tests that load real models
+pytest -m "not slow and not gpu"     # 187 fast tests: config, audio, VAD, ASR, MT, TTS, pipeline, server, eval
+pytest                               # all 193, including slow tests that load real models
 ruff check src tests
 ```
 
@@ -812,9 +894,9 @@ ruff check src tests
 - **Server tests.** These cover token, origin and rate limits, WebSocket protocol errors,
   turn-taking, cancel, busy handling, upload limits, temp-file cleanup and downloads.
 - **CI.** GitHub Actions runs lint and tests on Ubuntu and Windows with Python 3.10 and 3.11.
-- **Measurement scripts.** The figures in this README come from `scripts/asr_eval_fleurs.py`,
-  `scripts/mt_eval.py`, `scripts/tts_eval.py` and the `--live-sim` / `--export` run
-  directories.
+- **Measurement scripts.** The Phase 8 figures come from `python -m src.cli evaluate …`. Earlier
+  figures come from `scripts/asr_eval_fleurs.py`, `scripts/mt_eval.py`, `scripts/tts_eval.py`
+  and the `--live-sim` / `--export` run directories.
 
 ---
 
@@ -823,7 +905,7 @@ ruff check src tests
 | Next | What | Why |
 |---|---|---|
 | Phase 7 close-out | Real-mic test in Chrome/Edge (speaker choice, beeps, echo guard) | Only headless-tested so far |
-| **Phase 8** | Larger FLEURS / Common Voice ASR benchmark, end-to-end speech-to-speech BLEU/chrF, human ratings, latency under load | Replace small-sample numbers with solid ones |
+| Phase 8 close-out | Collect human ratings with the kit (`evaluate human-sheet`) | Automatic metrics don't measure adequacy or voice naturalness |
 | **Phase 9** | Colab notebooks for GPU runs | Measure the `realtime` / `accuracy` profiles |
 | **Phase 10** | Slurm scripts; fine-tune Swahili Whisper on local/domain speech (e.g. meetings, names) | ASR is the bottleneck for quality |
 | **Phase 11** | Docker image, docs, release | Easy installation |

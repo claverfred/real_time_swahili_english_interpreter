@@ -72,6 +72,10 @@ class AsrConfig(_Strict):
     no_speech_threshold: float = 0.6
     log_prob_threshold: float = -1.0
     compression_ratio_threshold: float = 2.4
+    # Final-decode temperatures: when a decode fails the log-prob / compression checks, Whisper
+    # retries at the next temperature (sampling). Each retry costs a full decode, so long lists
+    # create multi-second latency spikes on CPU. Partials always use 0.0 only.
+    temperatures: list[float] = Field(default_factory=lambda: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
     corrections_path: str | None = None   # Swahili->Swahili fixes for recurring ASR errors (CSV)
     fallback_models: list[str] = Field(default_factory=list)
 
@@ -111,6 +115,8 @@ class TextConfig(_Strict):
     add_final_punct: bool = True
     max_sentence_words: int = Field(40, ge=5)
     hold_incomplete_on_split: bool = True
+    # Swahili number words -> digits before MT ("elfu mbili" -> 2000), so English keeps exact figures.
+    number_words_to_digits: bool = False
 
 
 class TtsConfig(_Strict):

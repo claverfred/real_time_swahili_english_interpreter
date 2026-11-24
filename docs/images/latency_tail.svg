@@ -1,0 +1,36 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='860' height='340' viewBox='0 0 860 340' role='img' aria-label='Speaker stops → first English audio, before and after disabling temperature fallback' font-family='Segoe UI, system-ui, -apple-system, Helvetica, Arial, sans-serif'>
+<title>Speaker stops → first English audio, before and after disabling temperature fallback</title>
+<rect width='860' height='340' rx='8' fill='#fcfcfb' stroke='#e1e0d9'/>
+<text x='24.0' y='30.0' font-size='17' fill='#0b0b0b' text-anchor='start' font-weight='600'>Speaker stops → first English audio, before and after disabling temperature fallback</text>
+<text x='24.0' y='52.0' font-size='12.5' fill='#52514e' text-anchor='start' font-weight='normal'>30 real FLEURS recordings streamed at real time with TTS, cpu profile. Blue = current default (temperatures [0.0])</text>
+<line x1='354.0' x2='354.0' y1='72' y2='282' stroke='#e1e0d9' stroke-width='1'/>
+<text x='354.0' y='300.0' font-size='11.5' fill='#898781' text-anchor='middle' font-weight='normal'>0</text>
+<line x1='463.0' x2='463.0' y1='72' y2='282' stroke='#e1e0d9' stroke-width='1'/>
+<text x='463.0' y='300.0' font-size='11.5' fill='#898781' text-anchor='middle' font-weight='normal'>4.0 s</text>
+<line x1='572.0' x2='572.0' y1='72' y2='282' stroke='#e1e0d9' stroke-width='1'/>
+<text x='572.0' y='300.0' font-size='11.5' fill='#898781' text-anchor='middle' font-weight='normal'>8.0 s</text>
+<line x1='681.0' x2='681.0' y1='72' y2='282' stroke='#e1e0d9' stroke-width='1'/>
+<text x='681.0' y='300.0' font-size='11.5' fill='#898781' text-anchor='middle' font-weight='normal'>12.0 s</text>
+<line x1='790.0' x2='790.0' y1='72' y2='282' stroke='#e1e0d9' stroke-width='1'/>
+<text x='790.0' y='300.0' font-size='11.5' fill='#898781' text-anchor='middle' font-weight='normal'>16.0 s</text>
+<text x='342.0' y='92.0' font-size='13' fill='#52514e' text-anchor='end' font-weight='normal'>Median, fallback on</text>
+<rect x='354' y='78' width='97.0' height='18' rx='4' fill='#c3c2b7'/>
+<text x='459.0' y='92.0' font-size='12.5' fill='#0b0b0b' text-anchor='start' font-weight='normal'>3.6 s</text>
+<text x='342.0' y='126.0' font-size='13' fill='#0b0b0b' text-anchor='end' font-weight='600'>Median, fallback off</text>
+<rect x='354' y='112' width='93.7' height='18' rx='4' fill='#2a78d6'/>
+<text x='455.7' y='126.0' font-size='12.5' fill='#0b0b0b' text-anchor='start' font-weight='600'>3.4 s</text>
+<text x='342.0' y='160.0' font-size='13' fill='#52514e' text-anchor='end' font-weight='normal'>95th percentile, fallback on</text>
+<rect x='354' y='146' width='234.6' height='18' rx='4' fill='#c3c2b7'/>
+<text x='596.6' y='160.0' font-size='12.5' fill='#0b0b0b' text-anchor='start' font-weight='normal'>8.6 s</text>
+<text x='342.0' y='194.0' font-size='13' fill='#0b0b0b' text-anchor='end' font-weight='600'>95th percentile, fallback off</text>
+<rect x='354' y='180' width='139.5' height='18' rx='4' fill='#2a78d6'/>
+<text x='501.5' y='194.0' font-size='12.5' fill='#0b0b0b' text-anchor='start' font-weight='600'>5.1 s</text>
+<text x='342.0' y='228.0' font-size='13' fill='#52514e' text-anchor='end' font-weight='normal'>99th percentile, fallback on</text>
+<rect x='354' y='214' width='418.6' height='18' rx='4' fill='#c3c2b7'/>
+<text x='780.6' y='228.0' font-size='12.5' fill='#0b0b0b' text-anchor='start' font-weight='normal'>15.4 s</text>
+<text x='342.0' y='262.0' font-size='13' fill='#0b0b0b' text-anchor='end' font-weight='600'>99th percentile, fallback off</text>
+<rect x='354' y='248' width='155.3' height='18' rx='4' fill='#2a78d6'/>
+<text x='517.3' y='262.0' font-size='12.5' fill='#0b0b0b' text-anchor='start' font-weight='600'>5.7 s</text>
+<line x1='354' x2='354' y1='72' y2='282' stroke='#c3c2b7'/>
+<text x='24.0' y='326.0' font-size='11.5' fill='#898781' text-anchor='start' font-weight='normal'>Accuracy was unchanged (WER 0.272 vs 0.274 on all 487 recordings); the retries only added latency spikes.</text>
+</svg>
