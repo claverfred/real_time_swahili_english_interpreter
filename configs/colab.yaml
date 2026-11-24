@@ -1,5 +1,19 @@
 inherits: default
 profile: colab
-description: Hosted GPU (T4/L4/A100/L40S) with Google Drive cache persistence.
-environment: {platform: colab, device: cuda, precision: fp16}
-storage: {cache_dir: /content/drive/MyDrive/swahili_interpreter/cache, output_dir: /content/results, log_dir: /content/logs}
+description: Hosted GPU (T4/L4/A100/L40S) with Google Drive persistence. Same models as cpu, on GPU.
+# Starting point = the models measured on CPU in Phases 3-8, so GPU results are directly comparable.
+# Larger candidates (large-v3-turbo, NLLB-1.3B/3.3B) are compared in notebooks 02 and 03 with
+# --set overrides; nothing here is changed until those measurements exist.
+# Not yet measured on Colab (no GPU on the development machine).
+environment: {platform: colab, device: cuda, precision: auto}   # auto: bf16 on Ampere+ (L4/A100/L40S), fp16 on T4
+asr: {model: Mollel/ASR-Swahili-Small, revision: b2bab6c17b39a0d9b17549444535d4018782a958,
+      license: Apache-2.0, beam_size: 5, chunk_s: 1.0, overlap_s: 0.5, partials: true, temperatures: [0.0],
+      fallback_models: [cdli/whisper-small-swahili-afrivoice_cv, large-v3-turbo]}
+text: {number_words_to_digits: true}
+mt: {model: facebook/nllb-200-distilled-600M, license: CC-BY-NC-4.0, beam_size: 4,
+     fallback_models: [Helsinki-NLP/opus-mt-swc-en]}
+# Persistent root: Google Drive (MyDrive/swahili_interpreter) when mounted, set by
+# src.platform.colab.bootstrap(); the default is the VM's local disk (lost when the runtime resets).
+storage: {cache_dir: "${SWI_COLAB_ROOT:-/content/swahili_interpreter}/cache",
+          output_dir: "${SWI_COLAB_ROOT:-/content/swahili_interpreter}/results",
+          log_dir: "${SWI_COLAB_ROOT:-/content/swahili_interpreter}/logs"}

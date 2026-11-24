@@ -80,7 +80,7 @@ relevant, measured on the local CPU before the next one starts.
 | 6 | Async pipeline, Python API, batch/live CLI, turn-taking mode | ✅ Done |
 | 7 | FastAPI/WebSocket server + browser UI | ✅ Done. Tested end to end in headless Edge with a recording as the microphone. A test with a real microphone in a browser is pending. |
 | 8 | Systematic evaluation and benchmarks | ✅ Done: `evaluate` CLI, full FLEURS speech→English benchmark, robustness, real-time latency, MT on full FLORES devtest. Human ratings: kit ready, no ratings collected yet. |
-| 9 | Google Colab notebooks | ⏳ Planned (config profile exists, not yet run) |
+| 9 | Google Colab notebooks | 🧪 Built: 6 notebooks, setup script, Drive persistence, smoke test ([docs/colab.md](docs/colab.md)). Tested on the local CPU; **not yet run on a Colab GPU**, so no GPU results yet. |
 | 10 | HPC Slurm scripts + ASR fine-tuning | ⏳ Planned (config profiles exist, not yet run) |
 | 11 | Documentation, Docker, release | ⏳ Planned |
 
@@ -107,6 +107,7 @@ relevant, measured on the local CPU before the next one starts.
 | ASR partial results and partial translation | 🧪 Off on CPU (adds about 1 s of delay); intended for GPU |
 | Name pronunciation dictionary for English TTS | 🧪 Supported, not enabled (no measured gain) |
 | Kokoro (local) and Edge (cloud) voices | 🧪 Opt-in (too slow on this CPU; Edge sends text to Microsoft) |
+| Colab notebooks: setup, ASR/MT/TTS benchmarks, live demo (browser mic), complete pipeline | 🧪 Built and tested locally; first Colab GPU run pending |
 | GPU, Colab and HPC profiles (`balanced`, `accuracy`, `realtime`, `colab`, `hpc*`) | ⏳ Configured but **not measured** |
 | Human ratings of translation and voice quality | 🧪 Rating kit and protocol ready ([docs/human_evaluation.md](docs/human_evaluation.md)); **no ratings collected yet** |
 | Fine-tuning Swahili ASR on local data | ⏳ Phase 10 |
@@ -135,7 +136,7 @@ latency tests but easier than real speech.
 | TTS intelligibility (Whisper round-trip WER) | 0.074 overall, 0.21 on names & numbers | same |
 | Browser end-to-end test | 6 of 6 sentences correct on screen, no browser errors | Headless Edge, fake mic from a 30 s clip, continuous mode |
 | Memory | ~1.55 GB RSS for the full pipeline | `cpu` profile |
-| Automated tests | 193 passing (187 fast + 6 slow); ruff clean | `pytest` |
+| Automated tests | 199 fast passing (1 skipped on Windows: symlinks) + 6 slow; ruff clean | `pytest` |
 
 ![Bar chart: word error rate on FLEURS Swahili for seven ASR configurations; the Swahili fine-tune Mollel/ASR-Swahili-Small with beam 5 is lowest at 0.28 and OpenAI Whisper small is highest at 0.79](docs/images/asr_wer_fleurs.svg)
 
@@ -335,7 +336,7 @@ flowchart TB
     D --> ACC["accuracy ⏳"]
     D --> RT["realtime ⏳"]
     D --> LV["low_vram ⏳"]
-    D --> COL["colab ⏳"]
+    D --> COL["colab 🧪"]
     D --> HPC["hpc ⏳"]
     HPC --> HE["hpc_evaluate ⏳"]
     HPC --> HF["hpc_finetune ⏳"]
@@ -439,6 +440,21 @@ runs fully offline.
 5. Click **Stop** for download links.
 
 ![Browser UI during a live session: green "Speak Swahili now" banner and the first three interpreted sentences](docs/images/ui_live.png)
+
+### On Google Colab (GPU) 🧪
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/claverfred/real_time_swahili_english_interpreter/blob/main/notebooks/01_environment_setup.ipynb)
+
+Open [notebooks/01_environment_setup.ipynb](notebooks/01_environment_setup.ipynb), choose a GPU
+runtime, and run the first cell. It clones the repository, mounts Google Drive for persistent
+models, data and results, installs the extras without touching Colab's PyTorch, and smoke-tests
+every stage. The other notebooks:
+
+- 02, 03, 04: benchmark ASR, MT and TTS candidates.
+- 05: live demo with the browser microphone.
+- 06: the full Phase 8 benchmark on the GPU, next to the CPU baseline.
+
+See [docs/colab.md](docs/colab.md). Not yet run on Colab.
 
 ---
 
@@ -783,7 +799,7 @@ python -m src.cli config show --profile cpu --resolve
 | `cpu` / `local_windows` | CPU-only PC; Windows mic capture | ✅ Measured; all results above |
 | `offline` | No external calls; restricted data | ✅ |
 | `realtime`, `balanced`, `accuracy`, `low_vram` | GPU PCs (larger ASR/MT models) | ⏳ Not measured; no GPU available yet |
-| `colab` | Google Colab GPU, Drive cache | ⏳ Phase 9 |
+| `colab` | Google Colab GPU; same models as `cpu`, fp16/bf16, ASR partials on, MT beam 4; Drive persistence via `SWI_COLAB_ROOT` | 🧪 Notebooks ready, not yet run on Colab |
 | `hpc`, `hpc_evaluate`, `hpc_finetune` | Slurm clusters | ⏳ Phase 10 |
 | `cloud_fallback` | Allows cloud TTS/MT/ASR for public data | 🧪 Opt-in |
 
@@ -868,12 +884,13 @@ src/
   text/                  stabilization, Swahili sentence aggregation, number words → digits
   mt/                    CTranslate2 / transformers translators, guards, masking, cache
   tts/                   Piper, SAPI, Kokoro, MMS, Edge backends; chunking, spoken form
-  pipeline/              RealtimeSwahiliInterpreter (async API), events, export
+  pipeline/              RealtimeSwahiliInterpreter (async API), InterpreterSession (sync, notebooks), events, export
   server/                FastAPI app, WebSocket live session, model pool, security, static UI
-  eval/                  metrics, datasets (FLEURS↔FLORES), perturbations, speech/latency/MT runs, human kit, reports
-  platform/  utils/      diagnosis, storage paths, logging, manifests, stats
+  eval/                  metrics, datasets (FLEURS↔FLORES), perturbations, speech/latency/MT runs, human kit, reports, run summaries
+  platform/  utils/      diagnosis, storage paths, Colab helpers, logging, manifests, stats
   cli/                   `python -m src.cli …` commands
-scripts/                 data fetchers, model comparisons, MT/TTS evaluation, README figures
+notebooks/               Google Colab notebooks 01-06 (generated by scripts/make_notebooks.py)
+scripts/                 data fetchers, Colab setup, model comparisons, MT/TTS evaluation, README figures, notebook generator
 tests/                   pytest suite (SAPI-synthesized speech fixtures on Windows)
 docs/images/             screenshots and result charts used in this README
 REALTIME_SWAHILI_ENGLISH_SYSTEM.md   full system specification
@@ -884,8 +901,8 @@ REALTIME_SWAHILI_ENGLISH_SYSTEM.md   full system specification
 ## Testing
 
 ```powershell
-pytest -m "not slow and not gpu"     # 187 fast tests: config, audio, VAD, ASR, MT, TTS, pipeline, server, eval
-pytest                               # all 193, including slow tests that load real models
+pytest -m "not slow and not gpu"     # 200 fast tests: config, audio, VAD, ASR, MT, TTS, pipeline, server, eval, Colab
+pytest                               # plus 6 slow tests that load real models
 ruff check src tests
 ```
 
@@ -906,6 +923,6 @@ ruff check src tests
 |---|---|---|
 | Phase 7 close-out | Real-mic test in Chrome/Edge (speaker choice, beeps, echo guard) | Only headless-tested so far |
 | Phase 8 close-out | Collect human ratings with the kit (`evaluate human-sheet`) | Automatic metrics don't measure adequacy or voice naturalness |
-| **Phase 9** | Colab notebooks for GPU runs | Measure the `realtime` / `accuracy` profiles |
+| **Phase 9 close-out** | Run notebooks 01-06 on a Colab GPU; add the GPU results here | First GPU numbers; decide whether larger ASR/MT models are worth it |
 | **Phase 10** | Slurm scripts; fine-tune Swahili Whisper on local/domain speech (e.g. meetings, names) | ASR is the bottleneck for quality |
 | **Phase 11** | Docker image, docs, release | Easy installation |

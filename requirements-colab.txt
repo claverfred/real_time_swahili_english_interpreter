@@ -1,0 +1,4 @@
+# Google Colab: everything except torch, which Colab preinstalls with a matching CUDA build.
+# Installed by scripts/setup_colab.py with constraints that keep Colab's torch/numpy/scipy
+# versions, so the runtime never needs a restart after setup.
+-e .[audio,asr,mt,tts,ui,eval,dev]
