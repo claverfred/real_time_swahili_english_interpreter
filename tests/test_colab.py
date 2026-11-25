@@ -126,10 +126,22 @@ def test_zip_runs_keeps_run_folder_names(tmp_path):
     assert info["files"] == 3
 
 
-def test_run_cli_returns_new_run_dir(tmp_path, monkeypatch):
+def test_require_gpu_stops_gpu_profiles_on_a_cpu_runtime():
+    from src.platform.cuda import CudaStatus, GpuInfo
+    none = CudaStatus(False, "none")
+    with pytest.raises(RuntimeError, match="Change runtime type"):
+        colab.require_gpu("colab", none)
+    assert colab.require_gpu("cpu", none) == "cpu"
+    t4 = CudaStatus(True, "torch", gpus=[GpuInfo(0, "Tesla T4", 15360, "7.5")])
+    assert colab.require_gpu("colab", t4) == "Tesla T4"
+
+
+def test_run_cli_returns_new_run_dir_and_the_error_line(tmp_path, monkeypatch):
     monkeypatch.setenv(colab.ROOT_ENV, str(tmp_path))
     r = colab.run_cli(["config", "list"], echo=False)
-    assert r["returncode"] == 0 and "colab" in r["tail"] and r["run_dir"] is None
+    assert r["returncode"] == 0 and "colab" in r["tail"] and r["run_dir"] is None and r["error"] is None
+    r = colab.run_cli(["config", "show", "--profile", "no-such-profile"], echo=False)
+    assert r["returncode"] == 2 and r["error"].startswith("error:") and r["run_dir"] is None
     with colab.GpuMonitor() as mon:
         pass
     assert mon.peak_mb is None or mon.peak_mb >= 0

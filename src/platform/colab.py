@@ -486,8 +486,30 @@ def run_cli(args: list[str], *, prefix: str | None = None, echo: bool = True,
         rc = proc.wait()
     new = [p for p in out_dir.glob(f"{prefix or ''}*") if p.is_dir() and p.name not in before] if out_dir.is_dir() else []
     run_dir = max(new, key=lambda p: p.stat().st_mtime) if new else None
-    return {"returncode": rc, "run_dir": str(run_dir) if run_dir else None, "seconds": round(time.perf_counter() - t0, 1),
-            "gpu_peak_mb": mon.peak_mb, "gpu_baseline_mb": mon.baseline_mb, "tail": "".join(lines[-15:])}
+    errors = [ln.strip() for ln in lines if ln.lstrip().lower().startswith("error:")]
+    return {"returncode": rc, "run_dir": str(run_dir) if run_dir and rc == 0 else None,
+            "seconds": round(time.perf_counter() - t0, 1), "gpu_peak_mb": mon.peak_mb,
+            "gpu_baseline_mb": mon.baseline_mb, "tail": "".join(lines[-15:]),
+            "error": errors[-1] if errors else (None if rc == 0 else lines[-1].strip() if lines else None)}
+
+
+NO_GPU = ("No GPU in this Colab runtime. The '{profile}' profile runs on CUDA and benchmarks refuse to "
+          "fall back to CPU. Fix: Runtime > Change runtime type > T4 GPU (or better) > Save, then run all "
+          "cells again. To run on CPU on purpose (slow; same models as the development PC), set PROFILE = \"cpu\".")
+
+
+def require_gpu(profile: str = "colab", status: object = None) -> str:
+    """Stop a notebook early, with an actionable message, when the profile needs CUDA but the
+    runtime has none. Returns the GPU name (or "cpu" for a profile that does not need one)."""
+    from ..config import load_config
+    from .cuda import probe_cuda
+
+    st = status if status is not None else probe_cuda()
+    if st.available and st.gpus:                                   # type: ignore[attr-defined]
+        return str(st.gpus[0].name)                                # type: ignore[attr-defined]
+    if load_config(profile).environment.device == "cuda":
+        raise RuntimeError(NO_GPU.format(profile=profile))
+    return "cpu"
 
 
 def bootstrap(repo: str | os.PathLike[str] = ".", *, use_drive: bool = True,

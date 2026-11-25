@@ -17,7 +17,25 @@ BADGE = ("[![Open In Colab](https://colab.research.google.com/assets/colab-badge
          f"(https://colab.research.google.com/github/{GITHUB}/blob/main/notebooks/{{name}})")
 
 
-def setup_cell(setup_args: str) -> str:
+GPU_CHECKS = {
+    # Benchmarks stop here instead of failing every run later with "device: cuda unavailable".
+    "require": '''
+GPU = colab.require_gpu(PROFILE).replace(" ", "_")
+print("GPU:", GPU)
+''',
+    "warn": '''
+try:
+    GPU = colab.require_gpu(PROFILE).replace(" ", "_")
+    print("GPU:", GPU)
+except RuntimeError as exc:
+    GPU = "cpu"
+    print("WARNING:", exc, "This notebook still runs on CPU, much more slowly.")
+''',
+    "none": "",
+}
+
+
+def setup_cell(setup_args: str, gpu: str = "require") -> str:
     return f'''# @title 1. Setup: clone/update the repository, mount Drive, install, fetch data (safe to re-run)
 REPO_URL = "https://github.com/{GITHUB}.git"  # @param {{type:"string"}}
 BRANCH = "main"  # @param {{type:"string"}}
@@ -48,7 +66,7 @@ stale = colab.restart_required()
 if stale:
     print("Restart the runtime (Runtime > Restart session), then run this cell again:", stale)
 assert r.returncode == 0, "setup reported a failure (see the table above)"
-'''
+''' + GPU_CHECKS[gpu]
 
 
 EXPORT = '''# @title Export: ZIP this notebook's runs (JSON, CSV, audio, logs, images, manifests) and download
@@ -72,14 +90,26 @@ def table(runs, extra_keys=("label", "gpu_peak_mb", "seconds")):
     rows = []
     for r in runs:
         if not r.get("run_dir"):
-            rows.append({"label": r.get("label"), "status": f"FAILED (exit {r['returncode']})"})
+            rows.append({"label": r.get("label"), "status": f"FAILED (exit {r['returncode']})",
+                         "error": r.get("error")})
             continue
         for row in summarize_run(r["run_dir"]):
             rows.append({**{k: r.get(k) for k in extra_keys}, **row, "status": "ok"})
-    return pd.DataFrame(rows)
-
-GPU = (colab.environment_report()["cuda"]["gpus"] or [{"name": "cpu"}])[0]["name"].replace(" ", "_")
+    df = pd.DataFrame(rows, columns=None if rows else ["label", "status"])
+    if "status" in df and not (df.status == "ok").any():
+        print("No candidate finished. The first error was:\\n ", next((r.get("error") for r in runs if r.get("error")), "?"))
+    return df
 '''
+
+NOTHING_TO_PLOT = '''ok = df[df.status == "ok"].copy() if "status" in df else df.iloc[0:0]
+if ok.empty:
+    print("Nothing to plot: no candidate finished (see the status/error columns above).")
+else:
+'''
+
+
+def indent(src: str) -> str:
+    return "".join("    " + ln if ln.strip() else ln for ln in src.splitlines(keepends=True))
 
 
 def nb(name: str, cells: list[tuple[str, str]]) -> dict:
@@ -120,7 +150,7 @@ Prepares a fresh Colab runtime and checks every stage on the GPU:
 
 The first run downloads and converts the models (about 5-10 minutes). Later runs reuse them from Drive.
 """),
-    ("code", setup_cell("")),
+    ("code", setup_cell("", gpu="warn")),
     ("code", '''# @title 2. GPU and package report
 import json
 rep = colab.environment_report()
@@ -174,12 +204,13 @@ for label, model, rev, beam in CANDIDATES:
                        "--set", f"asr.model={model}", "--set", f"asr.revision={rev}", "--set", f"asr.beam_size={beam}",
                        "--set", "fallback.policy=fail"], prefix="eval-speech")
     runs.append({"label": label, **r})
-    print(f"-> exit {r['returncode']}, {r['seconds']} s, peak GPU memory {r['gpu_peak_mb']} MB")
+    print(f"-> exit {r['returncode']}, {r['seconds']} s, peak GPU memory {r['gpu_peak_mb']} MB"
+          + (f"\\n-> FAILED: {r['error']}" if r["returncode"] else ""))
 '''),
     ("code", '''# @title 4. Comparison table (saved as CSV next to the runs)
 ''' + TABLE_HELPERS + '''
 df = table(runs)
-cols = ["label", "status", "n", "wer", "wer_ci95", "wer_numbers_as_digits", "cer", "empty_rate",
+cols = ["label", "status", "error", "n", "wer", "wer_ci95", "wer_numbers_as_digits", "cer", "empty_rate",
         "decode_p50_s", "decode_p95_s", "decode_p99_s", "rtf", "gpu_peak_mb", "device", "asr_model"]
 display(df[[c for c in cols if c in df]])
 csv = colab.results_dir() / f"colab_asr_comparison_{GPU}.csv"
@@ -188,16 +219,16 @@ print("saved", csv)
 '''),
     ("code", '''# @title 5. Chart: WER with 95% CI
 import matplotlib.pyplot as plt
-ok = df[df.status == "ok"].copy()
-lo_hi = ok.wer_ci95.str.split("-", expand=True).astype(float)
+png = None
+''' + NOTHING_TO_PLOT + indent('''lo_hi = ok.wer_ci95.str.split("-", expand=True).astype(float)
 fig, ax = plt.subplots(figsize=(8, 0.5 + 0.45 * len(ok)))
 ax.barh(ok.label, ok.wer, xerr=[ok.wer - lo_hi[0], lo_hi[1] - ok.wer], color="#2a78d6", height=0.5, capsize=3)
 ax.invert_yaxis(); ax.set_xlabel("WER (lower is better)"); ax.set_title(f"FLEURS sw_ke test, n={N}, {GPU}")
 ax.grid(axis="x", color="#e1e0d9"); ax.set_axisbelow(True)
 png = colab.results_dir() / f"colab_asr_comparison_{GPU}.png"
 fig.savefig(png, dpi=150, bbox_inches="tight"); plt.show()
-'''),
-    ("code", '''RUN_DIRS, EXTRA_FILES, EXPORT_NAME = [r["run_dir"] for r in runs], [csv, png], "asr-benchmark"
+''')),
+    ("code", '''RUN_DIRS, EXTRA_FILES, EXPORT_NAME = [r["run_dir"] for r in runs], [f for f in (csv, png) if f], "asr-benchmark"
 ''' + EXPORT),
 ]
 
@@ -233,12 +264,13 @@ for label, backend, model, beam in CANDIDATES:
                        "--set", f"mt.model={model}", "--set", "mt.revision=main", "--set", f"mt.beam_size={beam}",
                        "--set", "fallback.policy=fail"], prefix="eval-mt")
     runs.append({"label": label, **r})
-    print(f"-> exit {r['returncode']}, {r['seconds']} s, peak GPU memory {r['gpu_peak_mb']} MB")
+    print(f"-> exit {r['returncode']}, {r['seconds']} s, peak GPU memory {r['gpu_peak_mb']} MB"
+          + (f"\\n-> FAILED: {r['error']}" if r["returncode"] else ""))
 '''),
     ("code", '''# @title 4. Comparison table (saved as CSV)
 ''' + TABLE_HELPERS + '''
 df = table(runs)
-cols = ["label", "status", "n", "bleu", "bleu_ci95", "chrf", "chrf_ci95", "chrf_pp", "numbers_kept", "names_vs_ref",
+cols = ["label", "status", "error", "n", "bleu", "bleu_ci95", "chrf", "chrf_ci95", "chrf_pp", "numbers_kept", "names_vs_ref",
         "omission_rate", "latency_p50_s", "latency_p95_s", "latency_p99_s", "gpu_peak_mb", "mt_model"]
 display(df[[c for c in cols if c in df]])
 csv = colab.results_dir() / f"colab_mt_comparison_{GPU}.csv"
@@ -247,8 +279,8 @@ print("saved", csv)
 '''),
     ("code", '''# @title 5. Chart: quality vs latency
 import matplotlib.pyplot as plt
-ok = df[df.status == "ok"]
-fig, ax = plt.subplots(figsize=(7, 4.5))
+png = None
+''' + NOTHING_TO_PLOT + indent('''fig, ax = plt.subplots(figsize=(7, 4.5))
 ax.scatter(ok.latency_p50_s, ok.chrf, s=60, color="#2a78d6")
 for _, r in ok.iterrows():
     ax.annotate(r.label, (r.latency_p50_s, r.chrf), textcoords="offset points", xytext=(6, 4), fontsize=8)
@@ -256,8 +288,8 @@ ax.set_xlabel("median latency per sentence (s)"); ax.set_ylabel("chrF (higher is
 ax.set_title(f"FLORES-200 devtest, n={N}, {GPU}"); ax.grid(color="#e1e0d9")
 png = colab.results_dir() / f"colab_mt_comparison_{GPU}.png"
 fig.savefig(png, dpi=150, bbox_inches="tight"); plt.show()
-'''),
-    ("code", '''RUN_DIRS, EXTRA_FILES, EXPORT_NAME = [r["run_dir"] for r in runs], [csv, png], "mt-benchmark"
+''')),
+    ("code", '''RUN_DIRS, EXTRA_FILES, EXPORT_NAME = [r["run_dir"] for r in runs], [f for f in (csv, png) if f], "mt-benchmark"
 ''' + EXPORT),
 ]
 
@@ -272,7 +304,7 @@ The proxy is not a listening test: naturalness needs human ratings (`docs/human_
 Piper runs on the CPU through onnxruntime even on a GPU runtime; MMS uses PyTorch (GPU when available).
 The CPU reference (development PC): Piper libritts_r first audio 0.22 s median, RTF 0.06, round-trip WER 0.074.
 """),
-    ("code", setup_cell(', "--no-smoke"')),
+    ("code", setup_cell(', "--no-smoke"', gpu="warn")),
     ("code", '''# @title 2. Candidates (backend:voice)
 INSTALL_KOKORO = False  # @param {type:"boolean"}
 CANDIDATES = ["piper:en_US-libritts_r-medium", "piper:en_US-joe-medium", "piper:en_US-lessac-medium",
@@ -296,7 +328,6 @@ print("exit", r.returncode, "| run", run_dir, "| peak GPU MB", mon.peak_mb, "|",
     ("code", '''# @title 4. Table (saved as CSV)
 import json, pandas as pd
 from IPython.display import display
-GPU = (colab.environment_report()["cuda"]["gpus"] or [{"name": "cpu"}])[0]["name"].replace(" ", "_")
 rows = []
 for x in json.loads((run_dir / "results.json").read_text(encoding="utf-8")):
     if x["status"] != "ok":
@@ -342,7 +373,7 @@ in memory, then interprets:
 `MyDrive/swahili_interpreter/inputs/` (delete them with the last cell). Nothing is sent to any other service:
 every model runs inside this Colab runtime.
 """),
-    ("code", setup_cell(', "--no-smoke"')),
+    ("code", setup_cell(', "--no-smoke"', gpu="warn")),
     ("code", '''# @title 2. Load the interpreter (models stay on the GPU until the last cell)
 colab.preload_cuda_libraries()
 from IPython.display import Audio, display

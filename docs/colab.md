@@ -98,7 +98,7 @@ the latest environment reports and lock file, then downloads the ZIP. The ZIP is
 
 | Symptom | Fix |
 |---|---|
-| `[warn] GPU: running on CPU` | Runtime → Change runtime type → GPU, then re-run the setup cell |
+| `[warn] GPU: running on CPU`, or `RuntimeError: No GPU in this Colab runtime` from the setup cell, or every benchmark run `FAILED (exit 2)` with `device: cuda unavailable` | Runtime → Change runtime type → T4 GPU → Save, then run all cells again. Benchmarks refuse to fall back to CPU. To run on CPU on purpose, set `PROFILE = "cpu"` (slow). |
 | `Could not load library libcudnn_ops.so.9` | Re-run the setup cell (it sets the CUDA library path); in notebook 05 run cell 2 again |
 | "Restart the runtime" printed by setup | Runtime → Restart session, then re-run the setup cell |
 | Drive mount refused | Set `USE_DRIVE = False` (nothing persists after the runtime is reset) |
